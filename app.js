@@ -98,8 +98,8 @@ function syllabusView() {
   <h2>Format</h2><p>${ed("C.format", C.format)}</p>
   <h2>Grading</h2><ul>${C.grading.map((g) => `<li>${esc(g[0])}: ${g[1]}%</li>`).join("")}</ul>
   <h2>Instructor and office hours</h2><p>${ed("C.instructor.bio", C.instructor.bio)}</p><p>${ed("C.officeHours", C.officeHours)} <a class="noprint" href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a></p><p class="noprint">Email: ${ed("C.email", C.email)}</p>
-  <h2>Schedule</h2><table class="syltab"><thead><tr><th>#</th><th>Date</th><th>Topic, guest and preparation</th></tr></thead><tbody>${rows.join("")}</tbody></table>
-  <p class="quiet">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6. Readings, guests and dates may change; the course site at ${esc(C.publicUrl)} is the current version.</p>
+  <h2>Schedule</h2><p class="noprint">The class-by-class schedule, with readings and guests, is on the <a href="#schedule">Schedule page</a>. The PDF includes it.</p><table class="syltab printonly"><thead><tr><th>#</th><th>Date</th><th>Topic, guest and preparation</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+  <p class="quiet printonly">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6. Readings, guests and dates may change; the course site at ${esc(C.publicUrl)} is the current version.</p>
   <h2>Course policies</h2><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
   <p>Other university policies: CU Boulder required syllabus statements, ${esc(C.policiesLink)}.</p></div>`;
 }
@@ -846,7 +846,7 @@ main.addEventListener("click", (e) => {
 /* ---------- Router ---------- */
 const VIEWS = { home, schedule, syllabus: syllabusView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { syllabus: "schedule", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { syllabus: "home", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h);
