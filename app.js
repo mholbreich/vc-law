@@ -5,6 +5,7 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const money = (v) => { const a = Math.abs(v), s = v < 0 ? "−" : ""; if (a >= 1e9) return s + "$" + (a / 1e9).toFixed(2) + "B"; if (a >= 1e6) return s + "$" + (a / 1e6).toFixed(a < 1e7 ? 2 : 1) + "M"; if (a >= 1e3) return s + "$" + Math.round(a / 1e3) + "K"; return s + "$" + a.toFixed(a < 10 ? 2 : 0); };
 const num = (v) => Math.round(v).toLocaleString("en-US");
 const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
+const px = (v) => (!v ? "$0" : v < 0.01 ? "$" + (+v.toPrecision(2)).toString() : "$" + v.toFixed(2));
 const PAL = ["#cfb87c", "#86692a", "#e8dbb4", "#3f6e8c", "#a6432b", "#6b7a45", "#6c3f6e", "#8a96a1", "#c97b5a", "#2f5d5d", "#b3a37a", "#94526b"];
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
 
@@ -164,6 +165,7 @@ function caseView() {
 const DEFAULT = {
   founders: [{ name: "Abigail", shares: 4e6 }, { name: "Bernard", shares: 4e6 }, { name: "Charlie", shares: 1.5e6 }],
   pool: 1e6,
+  fmv: { inc: 0.0001, pre: 0.10, Seed: 0.20, A: 0.30, B: 0.45 },
   grants: [{ name: "Dana (first engineer)", n: 250000, at: "Incorporation" }, { name: "Eli (head of product)", n: 200000, at: "Pre-seed" },
     { name: "Farah (VP Sales)", n: 350000, at: "Seed" }, { name: "Gabe (engineer)", n: 150000, at: "Seed" },
     { name: "Hana (CFO)", n: 400000, at: "Series A" }, { name: "Other employees (15)", n: 900000, at: "Series A" }, { name: "Other employees (25)", n: 1200000, at: "Series B" }],
@@ -181,18 +183,25 @@ const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}"
 
 const GRANT_STAGES = ["Incorporation", "Pre-seed", "Seed", "Series A", "Series B"];
 // Options granted at a stage come out of the unallocated pool and are held by named employees.
-function grantAt(state, st, stage) {
+function grantAt(state, st, stage, strike) {
   const holders = state.holders.map((h) => ({ ...h })); let pool = state.pool;
   (st.grants || []).filter((g) => g.at === stage && +g.n > 0).forEach((g) => {
     const n = Math.min(+g.n, Math.max(0, pool)); if (n <= 0) return;
-    holders.push({ name: g.name, cls: "Options", shares: n, option: true }); pool -= n;
+    holders.push({ name: g.name, cls: "Options", shares: n, option: true, strike, at: stage }); pool -= n;
   });
   return { ...state, holders, pool };
 }
 function computeCap(st) {
-  const s0 = grantAt({ holders: st.founders.map((f) => ({ name: f.name, cls: "Common", shares: +f.shares || 0 })), pool: +st.pool || 0 }, st, "Incorporation");
-  const pre = grantAt(s0, st, "Pre-seed");
+  const F = Object.assign({}, DEFAULT.fmv, st.fmv || {});
+  const fmvInc = +F.inc || 0;
+  const s0 = grantAt({ holders: st.founders.map((f) => ({ name: f.name, cls: "Common", shares: +f.shares || 0 })), pool: +st.pool || 0 }, st, "Incorporation", fmvInc);
   const safes = st.safes.filter((s) => s.inv > 0);
+  // Before a priced round there is no preferred price, so the pre-seed 409A is taken off the price implied by the lowest SAFE cap.
+  const capsP = safes.filter((s) => s.cap > 0);
+  const S00 = SIM.sum(s0.holders.map((h) => h.shares)) + s0.pool;
+  const capPrice = capsP.length ? Math.min(...capsP.map((s) => s.cap)) / (S00 / (1 - Math.min(0.9, SIM.sum(capsP.map((s) => s.inv / s.cap))))) : 0;
+  const fmvPre = Math.max(fmvInc, capPrice * (+F.pre || 0));
+  const pre = grantAt(s0, st, "Pre-seed", fmvPre);
   // Angel stage: what the capped SAFEs would own if they converted at their caps (an estimate; they hold no shares yet).
   const capped = safes.filter((s) => s.cap > 0);
   const frac = SIM.sum(capped.map((s) => s.inv / s.cap));
@@ -200,19 +209,22 @@ function computeCap(st) {
   const Ccap = frac < 1 ? S0 / (1 - frac) : S0;
   const angelEst = { holders: pre.holders.concat(capped.map((s) => ({ name: s.name, cls: "Seed", shares: s.inv / s.cap * Ccap }))), pool: pre.pool };
   const seedR = SIM.pricedRound(pre, safes, { ...st.Seed, cls: "Seed" });
-  const seed = { ...seedR, ...grantAt(seedR, st, "Seed") };
+  const fmvSeed = seedR.price * (+F.Seed || 0);
+  const seed = { ...seedR, ...grantAt(seedR, st, "Seed", fmvSeed) };
   const aR = SIM.pricedRound({ holders: seed.holders, pool: seed.pool }, [], { ...st.A, cls: "A" });
-  const a = { ...aR, ...grantAt(aR, st, "Series A") };
+  const fmvA = aR.price * (+F.A || 0);
+  const a = { ...aR, ...grantAt(aR, st, "Series A", fmvA) };
   const bR = SIM.pricedRound({ holders: a.holders, pool: a.pool }, [], { ...st.B, cls: "B" });
-  const b = { ...bR, ...grantAt(bR, st, "Series B") };
+  const fmvB = bR.price * (+F.B || 0);
+  const b = { ...bR, ...grantAt(bR, st, "Series B", fmvB) };
   const last = SIM.secondary(b, st.B.seller, st.B.investor, +st.B.sec || 0, "Common");
   last.post = b.post;
   const stages = [
-    { name: "Incorporation", s: s0 },
-    { name: "Pre-seed", s: angelEst, est: true, safes },
-    { name: "Seed", s: seed, r: seed, round: st.Seed },
-    { name: "Series A", s: a, r: a, round: st.A },
-    { name: "Series B", s: last, r: b, round: st.B }
+    { name: "Incorporation", s: s0, fmv: fmvInc, pref: 0 },
+    { name: "Pre-seed", s: angelEst, est: true, safes, fmv: fmvPre, pref: capPrice, prefLabel: "SAFE cap price" },
+    { name: "Seed", s: seed, r: seed, round: st.Seed, fmv: fmvSeed, pref: seedR.price },
+    { name: "Series A", s: a, r: a, round: st.A, fmv: fmvA, pref: aR.price },
+    { name: "Series B", s: last, r: b, round: st.B, fmv: fmvB, pref: bR.price }
   ];
   return { stages, last, seed, a, b };
 }
@@ -246,7 +258,7 @@ function capRows(stage) {
   const s = stage.s, total = SIM.sum(s.holders.map((h) => h.shares)) + s.pool, rows = {}, order = [];
   s.holders.forEach((h) => {
     const key = h.name.replace(/ \(secondary\)$/, "");
-    if (!rows[key]) { rows[key] = { name: key, by: {}, inv: 0, founder: ST.founders.some((f) => f.name === key), emp: !!h.option }; order.push(key); }
+    if (!rows[key]) { rows[key] = { name: key, by: {}, inv: 0, founder: ST.founders.some((f) => f.name === key), emp: !!h.option, strike: h.strike, at: h.at }; order.push(key); }
     rows[key].by[h.cls] = (rows[key].by[h.cls] || 0) + h.shares;
     rows[key].inv += h.secondary ? 0 : h.invested || 0;
   });
@@ -271,9 +283,9 @@ function drawCarta() {
   const cell = (v) => (v ? num(v) : "");
   const tot = (c) => SIM.sum(list.map((r) => r.by[c] || 0));
   let h = `<div class="seg" role="group" aria-label="Show the cap table as of">${out.stages.map((s) => `<button type="button" class="${s === stage ? "on" : ""}" data-asof="${esc(s.name)}">${esc(s.name)}</button>`).join("")}</div>
-  <div class="kpis"><div><b>${num(total)}</b><span>Fully diluted shares</span></div><div><b>${latestR ? money(latestR.r.price) : "—"}</b><span>${latestR ? esc(latestR.name) + " price per share" : "No priced round yet"}</span></div><div><b>${latestR ? money(latestR.r.post) : "—"}</b><span>Post-money valuation</span></div><div><b>${money(raised + (stage.est ? SIM.sum(stage.safes.map((s) => s.inv)) : 0))}</b><span>Total raised</span></div></div>`;
+  <div class="kpis"><div><b>${num(total)}</b><span>Fully diluted shares</span></div><div><b>${latestR ? money(latestR.r.price) : "—"}</b><span>${latestR ? esc(latestR.name) + " price per share" : "No priced round yet"}</span></div><div><b>${latestR ? money(latestR.r.post) : "—"}</b><span>Post-money valuation</span></div><div><b>${money(raised + (stage.est ? SIM.sum(stage.safes.map((s) => s.inv)) : 0))}</b><span>Total raised</span></div><div><b>${px(stage.fmv)}</b><span>409A value of a common share${stage.pref ? `, ${pct(stage.fmv / stage.pref, 0)} of the ${stage.prefLabel || "preferred price"}` : ""}</span></div></div>`;
   h += `<div class="scroll"><table class="carta"><thead><tr><th>Stakeholder</th>${used.map(([, l]) => `<th class="n">${l}</th>`).join("")}<th class="n">Options</th><th class="n">Fully diluted</th><th class="n">FD %</th><th class="n">Invested</th></tr></thead><tbody>`;
-  const row = (r) => `<tr><td>${esc(r.name)}${stage.est && !r.founder ? ' <span class="tag">as converted</span>' : ""}</td>${used.map(([c]) => `<td class="n">${cell(r.by[c])}</td>`).join("")}<td class="n">${cell(r.by.Options)}</td><td class="n">${num(r.fd)}</td><td class="n">${pct(r.pct)}</td><td class="n">${r.inv ? money(r.inv) : ""}</td></tr>`;
+  const row = (r) => `<tr><td>${esc(r.name)}${stage.est && !r.founder && !r.emp ? ' <span class="tag">as converted</span>' : ""}${r.emp ? ` <span class="tag">strike ${px(r.strike)}</span>` : ""}</td>${used.map(([c]) => `<td class="n">${cell(r.by[c])}</td>`).join("")}<td class="n">${cell(r.by.Options)}</td><td class="n">${num(r.fd)}</td><td class="n">${pct(r.pct)}</td><td class="n">${r.inv ? money(r.inv) : ""}</td></tr>`;
   const f = list.filter((r) => r.founder), emp = list.filter((r) => r.emp), inv = list.filter((r) => !r.founder && !r.emp);
   const granted = SIM.sum(emp.map((r) => r.by.Options || 0));
   h += `<tr class="grp"><td colspan="${used.length + 5}">Founders</td></tr>` + f.map(row).join("");
@@ -288,10 +300,18 @@ function drawCarta() {
   h += `<h3>Option grants</h3><p class="quiet">Each grant comes out of the unallocated pool at the stage you pick, so it shows from that stage on. If the pool runs short, the grant is cut to what is left. A round’s pool top-up is sized on the unallocated pool.</p>
   <form id="grants" onsubmit="return false"><div class="scroll"><table class="carta"><thead><tr><th>Employee</th><th class="n">Options</th><th>Granted at</th><th></th></tr></thead><tbody>${(ST.grants || []).map((g, i) => `<tr><td><input type="text" data-g="${i}" data-f="name" value="${esc(g.name)}" aria-label="Employee name"></td><td class="n"><input type="number" step="1000" min="0" data-g="${i}" data-f="n" value="${+g.n}" aria-label="Options" style="max-width:9em"></td><td><select data-g="${i}" data-f="at" aria-label="Granted at">${GRANT_STAGES.map((st) => `<option ${st === g.at ? "selected" : ""}>${st}</option>`).join("")}</select></td><td><button type="button" class="ghost" data-gdel="${i}" aria-label="Remove ${esc(g.name)}">Remove</button></td></tr>`).join("")}</tbody></table></div>
   <p><button type="button" class="ghost" id="gadd">Add a grant</button></p></form>`;
+  const F = Object.assign({}, DEFAULT.fmv, ST.fmv || {});
+  const fi = (k, l, unit) => `<label class="f">${l}${unit}<input type="number" step="any" min="0" data-fmv="${k}" value="${k === "inc" ? F[k] : +(F[k] * 100).toFixed(2)}"></label>`;
+  h += `<h3>409A valuation</h3><p class="quiet">Every option’s strike price must be at least the 409A value of a common share on the grant date, so each grant above takes the 409A value of its stage. Common is worth less than preferred because it has no liquidation preference, no special control rights and can’t easily be sold. As the company matures, a sale above the preference stack becomes likelier, so common’s value moves closer to preferred’s.</p>
+  <form id="fmvf" onsubmit="return false"><fieldset><legend>409A value of a common share</legend>${fi("inc", "At incorporation", " ($/share)")}${fi("pre", "Pre-seed", " (% of SAFE cap price)")}${fi("Seed", "After the Seed", " (% of preferred)")}${fi("A", "After the Series A", " (% of preferred)")}${fi("B", "After the Series B", " (% of preferred)")}</fieldset></form>
+  <div class="scroll"><table class="carta"><thead><tr><th>Stage</th><th class="n">Preferred price</th><th class="n">409A common</th><th class="n">Common ÷ preferred</th></tr></thead><tbody>${out.stages.map((s) => `<tr><td>${esc(s.name)}</td><td class="n">${s.pref ? px(s.pref) + (s.prefLabel ? " (cap)" : "") : "—"}</td><td class="n">${px(s.fmv)}</td><td class="n">${s.pref ? pct(s.fmv / s.pref, 0) : "—"}</td></tr>`).join("")}</tbody></table></div>
+  <details><summary>Where the defaults come from</summary><p>Appraisers usually value common with an option pricing model “backsolved” from the latest preferred price, then take a 25% to 35% discount for lack of marketability. Published benchmarks put common at roughly 10% to 30% of the preferred price after a seed round, 20% to 40% after a Series A, 35% to 60% after a Series B and 45% to 70% later on (<a href="https://409a-valuation.com/insights/409a-valuation-benchmarks" target="_blank" rel="noopener">409A Valuations, 2026</a>; <a href="https://www.1752.vc/learn/409a-valuation-investor-guide" target="_blank" rel="noopener">1752vc</a>). The defaults here sit near the middle of each range. Richer preferred terms, such as participation or a 2x preference, push common lower.</p></details>`;
   h += `<p style="margin-top:18px"><button type="button" class="ghost" id="csv">Download as a spreadsheet</button></p>`;
   el.innerHTML = h;
   el.onchange = (e) => {
-    const t = e.target; if (t.dataset.g === undefined) return;
+    const t = e.target;
+    if (t.dataset.fmv) { const k = t.dataset.fmv, v = Math.max(0, parseFloat(t.value) || 0); ST.fmv = Object.assign({}, DEFAULT.fmv, ST.fmv || {}); ST.fmv[k] = k === "inc" ? v : v / 100; save(); drawCarta(); return; }
+    if (t.dataset.g === undefined) return;
     const g = ST.grants[+t.dataset.g]; if (!g) return;
     g[t.dataset.f] = t.dataset.f === "n" ? Math.max(0, +t.value || 0) : t.value; save(); drawCarta();
   };
