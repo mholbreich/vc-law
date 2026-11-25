@@ -49,6 +49,25 @@ function schedRow(w, glance) {
     <p><span class="k">Practice.</span> ${ed("W." + i + ".focus", w.focus)}</p>
     <p><span class="k">Lived Experience.</span> ${ed("W." + i + ".guest", w.guest)}${w.proposedGuests ? ` <span class="quiet">(proposed: ${esc(w.proposedGuests)})</span>` : ""}</p>`}</div></li>`;
 }
+const TOOLNAME = { captable: "Cap table", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
+const classDate = (w) => new Date(w.date + ", 2027 23:59");
+function currentWeek() { const now = new Date(); return WEEKS.find((w) => classDate(w) >= now); }
+function scenButtons(w) {
+  return (w.scenarios || []).length ? `<div class="scen">${w.scenarios.map((sc, i) => `<button type="button" class="ghost" data-sc="${w.n}:${i}">${esc(sc.label)} <span class="quiet">· ${TOOLNAME[sc.tool]}</span></button>`).join("")}</div>` : "";
+}
+function thisWeekBox() {
+  const w = currentWeek(); if (!w) return "";
+  const i = WEEKS.indexOf(w), first = i === 0 && new Date() < new Date("Jan 7, 2027");
+  const core = w.readings.filter((id) => R[id] && R[id].status !== "suggested");
+  return `<section class="tw"><p class="quiet" style="margin:0">${first ? "First class" : "This week"} · Class ${w.n} · Thursday, ${esc(w.date)}</p>
+  <h2 style="margin-top:4px"><a href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a></h2>
+  ${C.thisWeekNote ? `<p class="ask" style="margin-top:0">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}
+  <p><span class="k">Before class.</span> ${ed("W." + i + ".prep", w.prep)}</p>
+  ${core.length ? `<ul class="list">${core.map((id) => item(id)).join("")}</ul>` : ""}
+  <p><span class="k">Guest.</span> ${ed("W." + i + ".guest", w.guest)}</p>
+  ${w.scenarios && w.scenarios.length ? `<p class="k" style="margin-bottom:6px">Try it in the tools</p>${scenButtons(w)}` : ""}</section>`;
+}
+const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "syllabus.pdf")}" target="_blank" rel="noopener">Download the syllabus (PDF)</a>`;
 function home() {
   return `<section class="hero"><div class="hin"><h1>Venture Capital Law</h1>
   <ul class="facts"><li><b>Spring 2027</b></li><li>Thursday evenings</li><li>January 14 to April 22</li></ul></div>
@@ -58,13 +77,14 @@ function home() {
     <path d="M390 220 L478 34 L520 44 L500 220Z" fill="var(--rock)" opacity=".92"/><path d="M478 34 L520 44 L514 66 Z" fill="#c9684c"/>
     <path d="M480 220 L560 70 L600 80 L590 220Z" fill="var(--rock)" opacity=".85"/></svg>
   <svg class="ground" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 L0 20 Q250 4 500 16 Q750 4 1000 14 L1000 40Z" fill="var(--pine)"/></svg></section>
-  <div class="narrow"><p class="sub" style="margin-top:28px">${ed("C.description", C.description)}</p>
+  <div class="narrow">${thisWeekBox()}<p class="sub" style="margin-top:28px">${ed("C.description", C.description)}</p>
   <h2>What you will be able to do</h2><ul>${C.objectives.map((o, i) => `<li>${ed("C.objectives." + i, o)}</li>`).join("")}</ul>
   <h2>How the class works</h2><p>${ed("C.format", C.format)}</p>
   <h2>Grading</h2><ul class="gl">${C.grading.map((g) => `<li><i style="background:${["var(--sky)","var(--pine)","var(--rock)"][C.grading.indexOf(g)]}"></i><b>${g[1]}%</b>${ed("C.grading." + C.grading.indexOf(g) + ".0", g[0])}</li>`).join("")}</ul>
   <h2>Instructor</h2><p><b>${esc(C.instructor.name)}</b></p><p>${ed("C.instructor.bio", C.instructor.bio)}</p>
   <h2>Office hours</h2><p>${ed("C.officeHours", C.officeHours)}</p>
   <p class="contact"><span>Email: <b>${ed("C.email", C.email)}</b></span><a class="btn" href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a></p>
+  <p class="noprint">${pdfLink()} <a href="#syllabus" style="margin-left:12px">Full syllabus on one page</a></p>
   <details class="pol"><summary>Course policies</summary><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` <a href="${esc(p[2])}" target="_blank" rel="noopener">${esc(p[3])}</a>` : ""}</dd>`).join("")}</dl>
   <p>Other university policies: <a href="${esc(C.policiesLink)}" target="_blank" rel="noopener">CU Boulder required syllabus statements</a>.</p></details></div>`;
 }
@@ -74,7 +94,27 @@ function schedule() {
   return `<div class="narrow"><h1>Schedule</h1>
   <p class="sub">Every class is split in half, with a 10-minute break: <i>The Practice of Venture Capital Law</i>, then <i>The Lived Experience of Venture Capital</i> with a guest.</p>
   <ul class="sched">${rows.join("")}</ul>
-  <p class="quiet" style="margin-top:18px">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6.</p></div>`;
+  <p class="quiet" style="margin-top:18px">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6.</p>
+  <p class="noprint">${pdfLink()}</p></div>`;
+}
+function syllabusView() {
+  const rows = WEEKS.map((w) => {
+    const rd = w.readings.filter((id) => R[id] && R[id].status !== "suggested").map((id) => esc(R[id].t));
+    return `<tr><td>${w.n}</td><td style="white-space:nowrap">${esc(w.date)}</td><td><b>${esc(w.title)}</b><br>${esc(w.focus)}<br><span class="quiet">Guest: ${esc(w.guest)}</span><br>Before class: ${esc(w.prep)}${rd.length ? `<br>Readings: ${rd.join("; ")}` : ""}</td></tr>`;
+  });
+  rows.splice(WEEKS.findIndex((w) => w.n === 10), 0, `<tr><td></td><td>Mar 18</td><td>Spring break, no class</td></tr>`);
+  return `<div class="narrow syl"><p class="noprint">${pdfLink()}</p><h1>Venture Capital Law</h1>
+  <p><b>Colorado Law · Spring 2027</b> · Thursday evenings, January 14 to April 22 · Instructor: ${esc(C.instructor.name)}</p>
+  <p class="noprint quiet">The live version is at <a href="${esc(C.publicUrl)}">${esc(C.publicUrl)}</a>.</p>
+  <h2>Course description</h2><p>${esc(C.description)}</p>
+  <h2>Learning objectives</h2><ul>${C.objectives.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>
+  <h2>Format</h2><p>${esc(C.format)}</p>
+  <h2>Grading</h2><ul>${C.grading.map((g) => `<li>${esc(g[0])}: ${g[1]}%</li>`).join("")}</ul>
+  <h2>Instructor and office hours</h2><p>${esc(C.instructor.bio)}</p><p>${esc(C.officeHours)}</p>
+  <h2>Schedule</h2><table class="syltab"><thead><tr><th>#</th><th>Date</th><th>Topic, guest and preparation</th></tr></thead><tbody>${rows.join("")}</tbody></table>
+  <p class="quiet">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6. Readings, guests and dates may change; the course site at ${esc(C.publicUrl)} is the current version.</p>
+  <h2>Course policies</h2><dl>${C.policies.map((p) => `<dt>${esc(p[0])}</dt><dd>${esc(p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
+  <p>Other university policies: CU Boulder required syllabus statements, ${esc(C.policiesLink)}.</p></div>`;
 }
 function weekView(n) {
   const w = WEEKS.find((x) => x.n === n); if (!w) return schedule();
@@ -92,7 +132,7 @@ function weekView(n) {
   ${more.length ? `<details><summary>Other sources for this class (${more.length})</summary><ul class="list">${more.map((id) => item(id)).join("")}</ul></details>` : ""}
   ${cs ? `<h2>The case</h2><h3 style="margin-top:0">${ed("K." + ck(cs) + ".title", cs.title)}</h3><p>${ed("K." + ck(cs) + ".body", cs.body)}</p>` : ""}
   ${ex.map((e) => `<div class="ask"><p><b>${esc(e.title)}</b> · ${esc(e.role)}</p><p>${esc(e.prompt)}</p></div>`).join("")}
-  ${w.tools.length ? `<p class="quiet">Tools: ${w.tools.map((t) => `<a href="#${t}">${TOOL[t]}</a>`).join(", ")}</p>` : ""}
+  ${w.scenarios && w.scenarios.length ? `<h2>Try it in the tools</h2><p class="quiet" style="margin-top:0">Each button opens a tool set up for this class. It replaces the numbers you had in that tool.</p>${scenButtons(w)}` : w.tools.length ? `<p class="quiet">Tools: ${w.tools.map((t) => `<a href="#${t}">${TOOL[t]}</a>`).join(", ")}</p>` : ""}
   <p style="margin-top:36px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">${prev ? `<a href="#week-${prev.n}">← ${esc(prev.title)}</a>` : "<span></span>"}${next ? `<a href="#week-${next.n}">${esc(next.title)} →</a>` : ""}</p></div>`;
 }
 
@@ -446,10 +486,16 @@ function termsheets() {
 }
 
 /* ---------- Tax ---------- */
-let TX = Object.assign({ issuedAfterJuly2025: true, years: 5, gain: 25e6, basis: 0.1e6, ltcg: 0.2, niit: 0.038, shares: 1e6, paid: 0.0001, fmvGrant: 0.0001, fmvVest: 2, vy: 4, exitPrice: 10, ordRate: 0.37, capRate: 0.238,
-  oN: 50000, oFmvGrant: 1, oStrike: 1, oFmvEx: 5, oSale: 20, oHeld: true, oOrd: 0.37, oCap: 0.238, oAmt: 0.28, oVest: 4, xIso: true }, store.get("vcl-tax-v1", {}));
+const TX_DEFAULT = { issuedAfterJuly2025: true, years: 5, gain: 25e6, basis: 0.1e6, ltcg: 0.2, niit: 0.038, shares: 1e6, paid: 0.0001, fmvGrant: 0.0001, fmvVest: 2, vy: 4, exitPrice: 10, ordRate: 0.37, capRate: 0.238,
+  oN: 50000, oFmvGrant: 1, oStrike: 1, oFmvEx: 5, oSale: 20, oHeld: true, oOrd: 0.37, oCap: 0.238, oAmt: 0.28, oVest: 4, xIso: true };
+let TX = Object.assign({}, TX_DEFAULT, store.get("vcl-tax-v1", {}));
 let TXTAB = store.get("vcl-txtab", "qsbs");
 const TXTABS = [["qsbs", "QSBS"], ["83b", "83(b) election"], ["options", "Stock options and 409A"], ["exercise", "Exercise cost and tax"]];
+const AMT_HELP = `<details class="amt"><summary>What is the AMT?</summary>
+  <p>The alternative minimum tax is a second way of computing federal income tax. You work out your tax the regular way, then again under the AMT rules, which add back some breaks and tax the result at 26% or 28% above an exemption. You pay whichever is higher.</p>
+  <p>For startup employees the break that matters is the ISO. When you exercise an ISO and keep the shares past December 31, the spread (the value at exercise minus the strike price) is not income for regular tax, but it is income for the AMT. A large exercise can produce a real tax bill on a gain that exists only on paper, with no shares sold to pay it. NSOs never trigger the AMT, because their spread is already taxed as ordinary income at exercise.</p>
+  <p>Three things soften it. The exemption (about $90,000 for a single filer and $140,000 for a married couple in 2026, phased out at higher incomes) shelters smaller exercises. AMT paid because of ISOs becomes a credit against regular tax in later years. And selling the shares in the same calendar year as the exercise removes the AMT adjustment, though the sale is then disqualifying and the spread is taxed as ordinary income.</p>
+  <p>The usual planning: exercise early, when the spread is small; exercise in slices each year to stay under the AMT line; or exercise in January, to have the most time to see where the stock goes before the tax is due. The tool above treats the AMT as a flat rate on the whole spread, so it overstates the bill for small exercises.</p></details>`;
 function tax() {
   if (!TXTABS.some(([k]) => k === TXTAB)) TXTAB = "qsbs";
   setTimeout(() => {
@@ -483,7 +529,7 @@ function tax() {
   return `<h1>Tools</h1>${tabs("tax")}
   <p class="sub">The federal tax questions founders and employees ask most: QSBS on a sale, the 83(b) election, and how stock options are taxed.</p>
   <div id="txw"><div class="seg" role="tablist" aria-label="Tax topic">${TXTABS.map(([k, l]) => `<button type="button" role="tab" aria-selected="${k === TXTAB}" class="${k === TXTAB ? "on" : ""}" data-tx="${k}">${l}</button>`).join("")}</div>
-  <form id="txc" onsubmit="return false">${body}</form></div>
+  <form id="txc" onsubmit="return false">${body}</form>${TXTAB === "options" || TXTAB === "exercise" ? AMT_HELP : ""}</div>
   <details><summary>What these leave out</summary><p>Federal tax only, and simplified. QSBS follows the 2025 amendments to § 1202: for stock issued after July 4, 2025, 50%, 75% or 100% of the gain is excluded after three, four or five years, up to the greater of $15 million (indexed after 2026) or ten times basis, and the company’s gross assets can be up to $75 million. Older stock keeps the five-year, $10 million rule. Gain that qualifies but isn’t excluded is taxed at up to 28%.</p><p>The 83(b) model assumes equal yearly vesting and a value that rises evenly to the fully vested figure. It ignores AMT and state tax.</p><p>The options model treats the AMT as a flat rate on the ISO spread, with no exemption and no later credit, and ignores payroll taxes on NSO income. A disqualifying ISO sale is taxed at the income rate. The 409A figure shows only the extra 20% tax on a discounted option’s spread, before interest and before the earlier timing of the income. Check the Code and regulations before relying on any of this.</p></details>`;
 }
 function drawTax() {
@@ -527,7 +573,8 @@ function drawTax() {
 }
 
 /* ---------- Fund economics ---------- */
-let FD = store.get("vcl-fund-v1", { size: 100e6, feeRate: 0.02, feeYears: 10, carry: 0.2, grossMoic: 3 });
+const FD_DEFAULT = { size: 100e6, feeRate: 0.02, feeYears: 10, carry: 0.2, grossMoic: 3 };
+let FD = store.get("vcl-fund-v1", Object.assign({}, FD_DEFAULT));
 function fundView() {
   setTimeout(() => { const c = document.getElementById("ctl"); bind(c, FD, () => { store.set("vcl-fund-v1", FD); drawFund(); }); drawFund(); });
   return `<h1>Tools</h1>${tabs("fund")}
@@ -788,10 +835,31 @@ document.addEventListener("focusout", async (e) => {
   catch (err) { edToast("That didn’t save. Try again."); }
 });
 
+/* ---------- Class scenarios: one click sets up a tool for that class ---------- */
+function runScenario(sc) {
+  const d = JSON.parse(JSON.stringify(DEFAULT));
+  if (sc.c) Object.keys(sc.c).forEach((k) => { d[k] = (d[k] && typeof d[k] === "object" && !Array.isArray(d[k])) ? Object.assign(d[k], sc.c[k]) : sc.c[k]; });
+  ST = d; save();
+  if (sc.tool === "fund") { FD = Object.assign({}, FD_DEFAULT, sc.f || {}); store.set("vcl-fund-v1", FD); }
+  if (sc.tool === "tax") { TX = Object.assign({}, TX_DEFAULT, sc.t || {}); store.set("vcl-tax-v1", TX); }
+  if (sc.d) { DSTAGE = sc.d; store.set("vcl-dstage", sc.d); }
+  if (sc.x) { TXTAB = sc.x; store.set("vcl-txtab", sc.x); }
+  if (sc.s) { TSEL = sc.s; store.set("vcl-tsel", sc.s); }
+  if (sc.asof) ASOF = sc.asof;
+  SHARED = false;
+  if (location.hash === "#" + sc.tool) route(); else location.hash = sc.tool;
+  window.scrollTo(0, 0);
+}
+main.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest("[data-sc]"); if (!b || EDIT.on) return;
+  const [n, i] = b.dataset.sc.split(":").map(Number), w = WEEKS.find((x) => x.n === n);
+  if (w && w.scenarios && w.scenarios[i]) runScenario(w.scenarios[i]);
+});
+
 /* ---------- Router ---------- */
-const VIEWS = { home, schedule, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
+const VIEWS = { home, schedule, syllabus: syllabusView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { syllabus: "schedule", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h);
