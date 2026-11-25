@@ -153,7 +153,7 @@ function peopleView() {
   return `<div class="narrow">${caseTabs("people")}<h1>The people</h1>
   <p class="sub">Everyone you will hear from in the case and the practice inboxes. You are the first-year associate at Hart & Lowell.</p>
   ${P.map((g) => `<h2>${esc(g.group)}</h2><p class="quiet">${esc(g.note)}</p><div class="cast">${g.people.map((p) => `<details class="person"><summary><b>${esc(p.name)}</b><span>${esc(p.role)}</span><span class="quiet">${esc(p.line)}</span></summary>
-    <dl><dt>What they’re like</dt><dd>${esc(p.like)}</dd><dt>What they want</dt><dd>${esc(p.wants)}</dd><dt>How they write</dt><dd>${esc(p.writes)}</dd><dt>Where they show up</dt><dd>${esc(p.classes)}</dd></dl></details>`).join("")}</div>`).join("")}</div>`;
+    <dl><dt>What they’re like</dt><dd>${esc(p.like)}</dd><dt>What they want</dt><dd>${esc(p.wants)}</dd>${p.irks ? `<dt>What irritates them</dt><dd>${esc(p.irks)}</dd>` : ""}${p.says ? `<dt>Things they say</dt><dd>${esc(p.says)}</dd>` : ""}<dt>How they write</dt><dd>${esc(p.writes)}</dd><dt>Where they show up</dt><dd>${esc(p.classes)}</dd></dl></details>`).join("")}</div>`).join("")}</div>`;
 }
 function caseView() {
   const show = store.get("vcl-instr", false);
