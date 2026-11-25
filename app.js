@@ -100,7 +100,7 @@ function syllabusView() {
   <h2>Instructor and office hours</h2><p>${ed("C.instructor.bio", C.instructor.bio)}</p><p>${ed("C.officeHours", C.officeHours)} <a class="noprint" href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a></p><p class="noprint">Email: ${ed("C.email", C.email)}</p>
   <h2>Schedule</h2><p class="noprint">The class-by-class schedule, with readings and guests, is on the <a href="#schedule">Schedule page</a>. The PDF includes it.</p><table class="syltab printonly"><thead><tr><th>#</th><th>Date</th><th>Topic, guest and preparation</th></tr></thead><tbody>${rows.join("")}</tbody></table>
   <p class="quiet printonly">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6. Readings, guests and dates may change; the course site at ${esc(C.publicUrl)} is the current version.</p>
-  <h2>Course policies</h2><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
+  <h2>Course policies</h2><p>${ed("C.policiesIntro", C.policiesIntro)}</p><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
   <p>Other university policies: CU Boulder required syllabus statements, ${esc(C.policiesLink)}.</p></div>`;
 }
 function weekView(n) {

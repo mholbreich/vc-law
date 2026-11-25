@@ -2,6 +2,7 @@
    Venture_Capital_Law_Spring_2027_Draft_Syllabus.docx. Anything with
    status:"suggested" was added in the app and is not yet assigned. */
 window.COURSE = {
+  policiesIntro: "Students are expected to know and abide by university policies and guidelines.",
   classTime: "4:30 to 7:00 pm",
   dinnerTime: "7:30 pm",
   tagline: "How startups raise money, who ends up owning what, and what the lawyers do in between.",
