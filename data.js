@@ -2,6 +2,7 @@
    Venture_Capital_Law_Spring_2027_Draft_Syllabus.docx. Anything with
    status:"suggested" was added in the app and is not yet assigned. */
 window.COURSE = {
+  tagline: "How startups raise money, who ends up owning what, and what the lawyers do in between.",
   title: "Venture Capital Law",
   term: "Spring 2027 · University of Colorado Law School",
   meta: "Thursday evenings · 2½ hours per session · 14 class meetings · Draft for discussion",

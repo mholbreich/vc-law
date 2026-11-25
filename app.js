@@ -58,18 +58,17 @@ function scenButtons(w) {
 function thisWeekBox() {
   const w = currentWeek(); if (!w) return "";
   const i = WEEKS.indexOf(w), first = i === 0 && new Date() < new Date("Jan 7, 2027");
-  const core = w.readings.filter((id) => R[id] && R[id].status !== "suggested");
   return `<section class="tw"><p class="quiet" style="margin:0">${first ? "First class" : "This week"} · Class ${w.n} · Thursday, ${esc(w.date)}</p>
   <h2 style="margin-top:4px"><a href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a></h2>
   ${C.thisWeekNote ? `<p class="ask" style="margin-top:0">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}
   <p><span class="k">Before class.</span> ${ed("W." + i + ".prep", w.prep)}</p>
-  ${core.length ? `<ul class="list">${core.map((id) => item(id)).join("")}</ul>` : ""}
-  <p><span class="k">Guest.</span> ${ed("W." + i + ".guest", w.guest)}</p>
+  <p><span class="k">Guest.</span> ${ed("W." + i + ".guest", w.guest)}. <a href="#week-${w.n}">Readings and details</a></p>
   ${w.scenarios && w.scenarios.length ? `<p class="k" style="margin-bottom:6px">Try it in the tools</p>${scenButtons(w)}` : ""}</section>`;
 }
 const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "syllabus.pdf")}" target="_blank" rel="noopener">Download the syllabus (PDF)</a>`;
 function home() {
   return `<section class="hero"><div class="hin"><h1>Venture Capital Law</h1>
+  <p class="htag">${ed("C.tagline", C.tagline)}</p>
   <ul class="facts"><li><b>Spring 2027</b></li><li>Thursday evenings</li><li>January 14 to April 22</li></ul></div>
   <svg class="hills" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 L0 62 Q160 30 330 52 Q480 20 640 44 Q820 18 1000 40 L1000 100Z" fill="var(--pine)" opacity=".5"/></svg>
   <svg class="irons" viewBox="280 20 340 200" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
@@ -77,16 +76,14 @@ function home() {
     <path d="M390 220 L478 34 L520 44 L500 220Z" fill="var(--rock)" opacity=".92"/><path d="M478 34 L520 44 L514 66 Z" fill="#c9684c"/>
     <path d="M480 220 L560 70 L600 80 L590 220Z" fill="var(--rock)" opacity=".85"/></svg>
   <svg class="ground" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 L0 20 Q250 4 500 16 Q750 4 1000 14 L1000 40Z" fill="var(--pine)"/></svg></section>
-  <div class="narrow">${thisWeekBox()}<p class="sub" style="margin-top:28px">${ed("C.description", C.description)}</p>
-  <h2>What you will be able to do</h2><ul>${C.objectives.map((o, i) => `<li>${ed("C.objectives." + i, o)}</li>`).join("")}</ul>
-  <h2>How the class works</h2><p>${ed("C.format", C.format)}</p>
-  <h2>Grading</h2><ul class="gl">${C.grading.map((g) => `<li><i style="background:${["var(--sky)","var(--pine)","var(--rock)"][C.grading.indexOf(g)]}"></i><b>${g[1]}%</b>${ed("C.grading." + C.grading.indexOf(g) + ".0", g[0])}</li>`).join("")}</ul>
-  <h2>Instructor</h2><p><b>${esc(C.instructor.name)}</b></p><p>${ed("C.instructor.bio", C.instructor.bio)}</p>
-  <h2>Office hours</h2><p>${ed("C.officeHours", C.officeHours)}</p>
-  <p class="contact"><span>Email: <b>${ed("C.email", C.email)}</b></span><a class="btn" href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a></p>
-  <p class="noprint">${pdfLink()} <a href="#syllabus" style="margin-left:12px">Full syllabus on one page</a></p>
-  <details class="pol"><summary>Course policies</summary><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` <a href="${esc(p[2])}" target="_blank" rel="noopener">${esc(p[3])}</a>` : ""}</dd>`).join("")}</dl>
-  <p>Other university policies: <a href="${esc(C.policiesLink)}" target="_blank" rel="noopener">CU Boulder required syllabus statements</a>.</p></details></div>`;
+  <div class="narrow">${thisWeekBox()}
+  <div class="tiles">
+    <a href="#schedule"><b>Schedule</b><span>14 Thursdays, each with a guest</span></a>
+    <a href="#case"><b>The case</b><span>One startup, from formation to exit</span></a>
+    <a href="#captable"><b>Tools</b><span>Cap tables, term sheets, tax</span></a>
+    <a href="#dinners"><b>Dinners</b><span>Sign up to eat with a guest</span></a>
+  </div>
+  <p class="quiet" style="margin-top:28px">${esc(C.instructor.name)} · Office hours by appointment · <a href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a> · <a href="#syllabus">Syllabus, grading and policies</a></p></div>`;
 }
 function schedule() {
   const rows = WEEKS.map((w) => schedRow(w, false));
@@ -106,14 +103,14 @@ function syllabusView() {
   return `<div class="narrow syl"><p class="noprint">${pdfLink()}</p><h1>Venture Capital Law</h1>
   <p><b>Colorado Law · Spring 2027</b> · Thursday evenings, January 14 to April 22 · Instructor: ${esc(C.instructor.name)}</p>
   <p class="noprint quiet">The live version is at <a href="${esc(C.publicUrl)}">${esc(C.publicUrl)}</a>.</p>
-  <h2>Course description</h2><p>${esc(C.description)}</p>
-  <h2>Learning objectives</h2><ul>${C.objectives.map((o) => `<li>${esc(o)}</li>`).join("")}</ul>
-  <h2>Format</h2><p>${esc(C.format)}</p>
+  <h2>Course description</h2><p>${ed("C.description", C.description)}</p>
+  <h2>Learning objectives</h2><ul>${C.objectives.map((o, i) => `<li>${ed("C.objectives." + i, o)}</li>`).join("")}</ul>
+  <h2>Format</h2><p>${ed("C.format", C.format)}</p>
   <h2>Grading</h2><ul>${C.grading.map((g) => `<li>${esc(g[0])}: ${g[1]}%</li>`).join("")}</ul>
-  <h2>Instructor and office hours</h2><p>${esc(C.instructor.bio)}</p><p>${esc(C.officeHours)}</p>
+  <h2>Instructor and office hours</h2><p>${ed("C.instructor.bio", C.instructor.bio)}</p><p>${ed("C.officeHours", C.officeHours)} <a class="noprint" href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a></p><p class="noprint">Email: ${ed("C.email", C.email)}</p>
   <h2>Schedule</h2><table class="syltab"><thead><tr><th>#</th><th>Date</th><th>Topic, guest and preparation</th></tr></thead><tbody>${rows.join("")}</tbody></table>
   <p class="quiet">Dates follow the CU Law 2026–27 calendar. Final exams run April 26 to May 6. Readings, guests and dates may change; the course site at ${esc(C.publicUrl)} is the current version.</p>
-  <h2>Course policies</h2><dl>${C.policies.map((p) => `<dt>${esc(p[0])}</dt><dd>${esc(p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
+  <h2>Course policies</h2><dl>${C.policies.map((p, i) => `<dt>${esc(p[0])}</dt><dd>${ed("C.policies." + i + ".1", p[1])}${p[2] ? ` (${esc(p[2])})` : ""}</dd>`).join("")}</dl>
   <p>Other university policies: CU Boulder required syllabus statements, ${esc(C.policiesLink)}.</p></div>`;
 }
 function weekView(n) {
