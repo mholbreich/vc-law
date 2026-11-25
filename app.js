@@ -147,11 +147,19 @@ function drawLib() {
 }
 
 /* ---------- Case ---------- */
+const caseTabs = (on) => `<div class="seg" role="tablist" aria-label="Case">${[["case", "The story"], ["people", "The people"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
+function peopleView() {
+  const P = window.PEOPLE || [];
+  return `<div class="narrow">${caseTabs("people")}<h1>The people</h1>
+  <p class="sub">Everyone you will hear from in the case and the practice inboxes. You are the first-year associate at Hart & Lowell.</p>
+  ${P.map((g) => `<h2>${esc(g.group)}</h2><p class="quiet">${esc(g.note)}</p><div class="cast">${g.people.map((p) => `<details class="person"><summary><b>${esc(p.name)}</b><span>${esc(p.role)}</span><span class="quiet">${esc(p.line)}</span></summary>
+    <dl><dt>What they’re like</dt><dd>${esc(p.like)}</dd><dt>What they want</dt><dd>${esc(p.wants)}</dd><dt>How they write</dt><dd>${esc(p.writes)}</dd><dt>Where they show up</dt><dd>${esc(p.classes)}</dd></dl></details>`).join("")}</div>`).join("")}</div>`;
+}
 function caseView() {
   const show = store.get("vcl-instr", false);
   setTimeout(() => { document.getElementById("instr").addEventListener("click", () => { store.set("vcl-instr", !show); route(); }); });
   const chapters = Object.values(CASE).sort((a, b) => a.week - b.week);
-  return `<div class="narrow"><h1>Mostly Human AI</h1>
+  return `<div class="narrow">${caseTabs("case")}<h1>Mostly Human AI</h1>
   <p class="sub">${ed("K.intro.body", CASE.intro.body)}</p>
   <ul>${CASE.intro.people.map((p, i) => `<li>${ed("K.intro.people." + i, p)}</li>`).join("")}</ul>
   ${chapters.map((c) => {
@@ -954,14 +962,14 @@ function inboxView(n) {
   });
   return `<div class="wide"><p class="quiet"><a href="#week-${n}">Class ${n}: ${esc(w.title)}</a> · Practice inbox</p>
   <h1>Practice inbox</h1><p class="sub">${esc(box.intro)}</p>
-  <p class="quiet">Practice only. Your replies stay on this device and aren’t sent to anyone. <button type="button" class="linkish" id="iball">Show all emails now</button> · <button type="button" class="linkish" id="ibreset">Start over</button></p>
+  <p class="quiet">Practice only. Your replies stay on this device and aren’t sent to anyone. <a href="#people">Who’s who</a> · <button type="button" class="linkish" id="iball">Show all emails now</button> · <button type="button" class="linkish" id="ibreset">Start over</button></p>
   <div id="ibx"></div></div>`;
 }
 
 /* ---------- Router ---------- */
-const VIEWS = { home, schedule, syllabus: syllabusView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
+const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { syllabus: "home", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { syllabus: "home", people: "case", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h), ib = /^inbox-(\d+)$/.exec(h);
