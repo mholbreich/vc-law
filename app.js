@@ -7,6 +7,21 @@ const num = (v) => Math.round(v).toLocaleString("en-US");
 const pct = (v, d = 1) => (v * 100).toFixed(d) + "%";
 const PAL = ["#cfb87c", "#86692a", "#e8dbb4", "#3f6e8c", "#a6432b", "#6b7a45", "#6c3f6e", "#8a96a1", "#c97b5a", "#2f5d5d", "#b3a37a", "#94526b"];
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+
+/* Shared scenario links: ?s=<encoded numbers>#tool loads someone else's numbers into the tools. */
+const SHARE_KEYS = { c: "vcl-cap-v2", t: "vcl-tax-v1", f: "vcl-fund-v1", d: "vcl-dstage", x: "vcl-txtab", s: "vcl-tsel" };
+const b64e = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64d = (t) => JSON.parse(decodeURIComponent(escape(atob(t.replace(/-/g, "+").replace(/_/g, "/")))));
+let SHARED = false;
+try {
+  const q = new URLSearchParams(location.search).get("s");
+  if (q) {
+    const o = b64d(q);
+    if (o && typeof o === "object") Object.keys(SHARE_KEYS).forEach((k) => { if (o[k] !== undefined && o[k] !== null) store.set(SHARE_KEYS[k], o[k]); });
+    SHARED = true;
+    try { history.replaceState(null, "", location.pathname + location.hash); } catch (e) {}
+  }
+} catch (e) {}
 const ck = (c) => Object.keys(CASE).find((k) => CASE[k] === c);
 const caseFor = (n) => Object.values(CASE).find((c) => c.week === n);
 
@@ -132,7 +147,7 @@ const DEFAULT = {
 let ST = (() => { const d = JSON.parse(JSON.stringify(DEFAULT)), s = store.get("vcl-cap-v2", {}); Object.keys(d).forEach((k) => { if (s[k] !== undefined) d[k] = (typeof d[k] === "object" && !Array.isArray(d[k])) ? Object.assign(d[k], s[k]) : s[k]; }); return d; })();
 const save = () => store.set("vcl-cap-v2", ST);
 const TOOLS = [["captable", "Cap table"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
-const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}" class="${k === on ? "on" : ""}">${l}</a>`).join("")}</div>`;
+const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}" class="${k === on ? "on" : ""}">${l}</a>`).join("")}</div>${SHARED ? `<p class="ask" style="margin-top:-12px">You opened a shared link, so these are the sender’s numbers. Press Start over to go back to the class defaults.</p>` : ""}<p class="sharerow"><button type="button" class="ghost" id="share">Copy link to these numbers</button><span class="quiet" id="sharemsg" aria-live="polite"></span></p><p class="quiet" id="sharebox" hidden></p>`;
 
 function computeCap(st) {
   const s0 = { holders: st.founders.map((f) => ({ name: f.name, cls: "Common", shares: +f.shares || 0 })), pool: +st.pool || 0 };
@@ -260,7 +275,7 @@ function dilution() {
       const d = e.target.dataset.del;
       if (d !== undefined) { ST.safes.splice(+d, 1); save(); paintDil(); }
       if (e.target.id === "addsafe") { ST.safes.push({ name: "Angel " + (ST.safes.length + 1), inv: 1e5, cap: 10e6, disc: 0 }); save(); paintDil(); }
-      if (e.target.id === "reset") { ST = JSON.parse(JSON.stringify(DEFAULT)); save(); paintDil(); }
+      if (e.target.id === "reset") { ST = JSON.parse(JSON.stringify(DEFAULT)); SHARED = false; save(); route(); }
     });
     bind(c, ST, () => { save(); drawDil(); });
     c.addEventListener("change", (e) => { if (e.target.tagName === "SELECT") { save(); drawDil(); } });
@@ -718,6 +733,21 @@ document.addEventListener("click", async (e) => {
   }
 });
 
+
+
+/* ---------- Share these numbers ---------- */
+function shareUrl() {
+  const o = { c: ST, t: TX, f: FD, d: DSTAGE, x: TXTAB, s: TSEL };
+  const base = (C.publicUrl || (location.origin + location.pathname)).replace(/[?#].*$/, "");
+  const h = (location.hash || "#captable").slice(1);
+  return base + "?s=" + b64e(o) + "#" + (/^[a-z-]+$/.test(h) ? h : "captable");
+}
+document.addEventListener("click", async (e) => {
+  if (!e.target || e.target.id !== "share") return;
+  const url = shareUrl(), msg = document.getElementById("sharemsg"), box = document.getElementById("sharebox");
+  box.hidden = false; box.textContent = url; msg.textContent = "Anyone who opens this link sees these numbers.";
+  try { await Promise.race([navigator.clipboard.writeText(url), new Promise((_, no) => setTimeout(no, 1500))]); msg.textContent = "Copied. Anyone who opens this link sees these numbers."; } catch (err) {}
+});
 
 /* ---------- Owner edit mode ---------- */
 const encKey = (k) => k.replace(/\./g, "~"), decKey = (k) => k.replace(/~/g, ".");
