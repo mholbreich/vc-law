@@ -2,10 +2,12 @@
    Venture_Capital_Law_Spring_2027_Draft_Syllabus.docx. Anything with
    status:"suggested" was added in the app and is not yet assigned. */
 window.COURSE = {
+  classTime: "4:30 to 7:00 pm",
+  dinnerTime: "7:30 pm",
   tagline: "How startups raise money, who ends up owning what, and what the lawyers do in between.",
   title: "Venture Capital Law",
   term: "Spring 2027 · University of Colorado Law School",
-  meta: "Thursday evenings · 2½ hours per session · 14 class meetings · Draft for discussion",
+  meta: "Thursdays, 4:30 to 7:00 pm · 2½ hours per session · 14 class meetings · Draft for discussion",
   description: "This course examines venture capital as an asset class, a profession, and a legal practice. Students follow a fictional venture-backed company from formation through financing, governance, employee and founder issues, distress, and liquidity. The course emphasizes how venture lawyers exercise judgment: interpreting deal terms, identifying material issues, advising clients, negotiating creatively, and drafting precisely.",
   objectives: [
     "Explain the economic incentives of venture investors, funds, founders, and employees.",

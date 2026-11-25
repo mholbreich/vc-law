@@ -58,7 +58,7 @@ function scenButtons(w) {
 function thisWeekBox() {
   const w = currentWeek(); if (!w) return "";
   const i = WEEKS.indexOf(w), first = i === 0 && new Date() < new Date("Jan 7, 2027");
-  return `<section class="tw"><p class="quiet" style="margin:0">${first ? "First class" : "This week"} · Class ${w.n} · Thursday, ${esc(w.date)}</p>
+  return `<section class="tw"><p class="quiet" style="margin:0">${first ? "First class" : "This week"} · Class ${w.n} · Thursday, ${esc(w.date)}, ${esc(C.classTime)}</p>
   <h2 style="margin-top:4px"><a href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a></h2>
   ${C.thisWeekNote ? `<p class="ask" style="margin-top:0">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}
   <p><span class="k">Before class.</span> ${ed("W." + i + ".prep", w.prep)}</p>
@@ -69,7 +69,7 @@ const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "
 function home() {
   return `<section class="hero"><div class="hin"><h1>Venture Capital Law</h1>
   <p class="htag">${ed("C.tagline", C.tagline)}</p>
-  <ul class="facts"><li><b>Spring 2027</b></li><li>Thursday evenings</li><li>January 14 to April 22</li></ul></div>
+  <ul class="facts"><li><b>Spring 2027</b></li><li>Thursdays, ${esc(C.classTime)}</li><li>January 14 to April 22</li></ul></div>
   <svg class="hills" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 L0 62 Q160 30 330 52 Q480 20 640 44 Q820 18 1000 40 L1000 100Z" fill="var(--pine)" opacity=".5"/></svg>
   <svg class="irons" viewBox="280 20 340 200" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
     <path d="M300 220 L395 52 L430 60 L410 220Z" fill="var(--rock)"/><path d="M395 52 L430 60 L425 80 Z" fill="#c9684c"/>
@@ -101,7 +101,7 @@ function syllabusView() {
   });
   rows.splice(WEEKS.findIndex((w) => w.n === 10), 0, `<tr><td></td><td>Mar 18</td><td>Spring break, no class</td></tr>`);
   return `<div class="narrow syl"><p class="noprint">${pdfLink()}</p><h1>Venture Capital Law</h1>
-  <p><b>Colorado Law · Spring 2027</b> · Thursday evenings, January 14 to April 22 · Instructor: ${esc(C.instructor.name)}</p>
+  <p><b>Colorado Law · Spring 2027</b> · Thursdays, ${esc(C.classTime)}, January 14 to April 22 · Dinners with guests at ${esc(C.dinnerTime)} · Instructor: ${esc(C.instructor.name)}</p>
   <p class="noprint quiet">The live version is at <a href="${esc(C.publicUrl)}">${esc(C.publicUrl)}</a>.</p>
   <h2>Course description</h2><p>${ed("C.description", C.description)}</p>
   <h2>Learning objectives</h2><ul>${C.objectives.map((o, i) => `<li>${ed("C.objectives." + i, o)}</li>`).join("")}</ul>
@@ -120,7 +120,7 @@ function weekView(n) {
   const cs = caseFor(n) || (w.caseCh && CASE[w.caseCh]);
   const ex = EX.filter((e) => e.week === n);
   const TOOL = { captable: "Cap table", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
-  return `<div class="narrow"><p class="quiet"><a href="#schedule">Schedule</a> · Class ${w.n} · Thursday, ${esc(w.date)}</p>
+  return `<div class="narrow"><p class="quiet"><a href="#schedule">Schedule</a> · Class ${w.n} · Thursday, ${esc(w.date)}, ${esc(C.classTime)}</p>
   <h1>${ed("W." + WEEKS.indexOf(w) + ".title", w.title)}</h1>
   <div class="halves"><div class="half"><h3>The Practice of Venture Capital Law</h3><p>${ed("W." + WEEKS.indexOf(w) + ".focus", w.focus)}</p></div>
   <div class="half"><h3>The Lived Experience of Venture Capital</h3><p>${ed("W." + WEEKS.indexOf(w) + ".guest", w.guest)}.${w.proposedGuests ? ` Proposed: ${esc(w.proposedGuests)}.` : " Guest to be announced."}</p></div></div>
@@ -610,7 +610,7 @@ function stopDinners() { DN.subs.forEach((u) => u()); DN.subs = []; }
 function dinnersView() {
   setTimeout(startDinners);
   return `<div class="narrow"><h1>Dinners</h1>
-  <p class="sub">Small dinners of about six students, each with one of our guests. Put in your name, rank your top five, and seats are assigned so that as many people as possible get one of their top choices.</p>
+  <p class="sub">Small dinners of about six students, each with one of our guests, at ${esc(C.dinnerTime)} after class. Put in your name, rank your top five, and seats are assigned so that as many people as possible get one of their top choices.</p>
   <div id="dn"><p class="quiet">Loading…</p></div></div>`;
 }
 async function startDinners() {
