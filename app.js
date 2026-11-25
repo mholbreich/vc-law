@@ -57,13 +57,8 @@ function scenButtons(w) {
 }
 function thisWeekBox() {
   const w = currentWeek(); if (!w) return "";
-  const i = WEEKS.indexOf(w), first = i === 0 && new Date() < new Date("Jan 7, 2027");
-  return `<section class="tw"><p class="quiet" style="margin:0">${first ? "First class" : "This week"} · Class ${w.n} · Thursday, ${esc(w.date)}, ${esc(C.classTime)}</p>
-  <h2 style="margin-top:4px"><a href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a></h2>
-  ${C.thisWeekNote ? `<p class="ask" style="margin-top:0">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}
-  <p><span class="k">Before class.</span> ${ed("W." + i + ".prep", w.prep)}</p>
-  <p><span class="k">Guest.</span> ${ed("W." + i + ".guest", w.guest)}. <a href="#week-${w.n}">Readings and details</a></p>
-  ${w.scenarios && w.scenarios.length ? `<p class="k" style="margin-bottom:6px">Try it in the tools</p>${scenButtons(w)}` : ""}</section>`;
+  const first = WEEKS.indexOf(w) === 0 && new Date() < new Date("Jan 7, 2027");
+  return `<a class="tw" href="#week-${w.n}"><span class="quiet">${first ? "First class" : "This week"} · Thursday, ${esc(w.date)}</span><b>${esc(w.title)}</b><span class="go">What to read and do →</span></a>${C.thisWeekNote ? `<p class="ask">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}`;
 }
 const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "syllabus.pdf")}" target="_blank" rel="noopener">Download the syllabus (PDF)</a>`;
 function home() {
@@ -77,13 +72,7 @@ function home() {
     <path d="M480 220 L560 70 L600 80 L590 220Z" fill="var(--rock)" opacity=".85"/></svg>
   <svg class="ground" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 L0 20 Q250 4 500 16 Q750 4 1000 14 L1000 40Z" fill="var(--pine)"/></svg></section>
   <div class="narrow">${thisWeekBox()}
-  <div class="tiles">
-    <a href="#schedule"><b>Schedule</b><span>14 Thursdays, each with a guest</span></a>
-    <a href="#case"><b>The case</b><span>One startup, from formation to exit</span></a>
-    <a href="#captable"><b>Tools</b><span>Cap tables, term sheets, tax</span></a>
-    <a href="#dinners"><b>Dinners</b><span>Sign up to eat with a guest</span></a>
-  </div>
-  <p class="quiet" style="margin-top:28px">${esc(C.instructor.name)} · Office hours by appointment · <a href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book a time</a> · <a href="#syllabus">Syllabus, grading and policies</a></p></div>`;
+  <p class="quiet" style="margin-top:22px"><a href="#syllabus">Syllabus, grading and policies</a> · <a href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book office hours</a></p></div>`;
 }
 function schedule() {
   const rows = WEEKS.map((w) => schedRow(w, false));
