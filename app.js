@@ -906,6 +906,7 @@ function inboxView(n) {
   if (!box || !w) return schedule();
   const key = "vcl-inbox-" + n;
   const S = store.get(key, { start: 0, open: "", sent: {}, all: false });
+  if (!S.start && !S.all) { S.start = Date.now(); S.open = (box.mail.find((x) => x.at === 0) || box.mail[0]).id; store.set(key, S); }
   const save2 = () => store.set(key, S);
   const elapsed = () => (S.start ? (Date.now() - S.start) / 60000 : -1);
   const arrived = () => box.mail.filter((m) => S.all || (S.start && elapsed() >= m.at));
@@ -946,7 +947,7 @@ function inboxView(n) {
       if (t.id === "ibredo") { delete S.sent[S.open]; save2(); draw(); }
     });
     document.getElementById("iball").addEventListener("click", () => { S.all = true; save2(); draw(); });
-    document.getElementById("ibreset").addEventListener("click", () => { S.start = 0; S.open = ""; S.sent = {}; S.draft = {}; S.all = false; save2(); draw(); });
+    document.getElementById("ibreset").addEventListener("click", () => { S.start = Date.now(); S.open = (box.mail.find((x) => x.at === 0) || box.mail[0]).id; S.sent = {}; S.draft = {}; S.all = false; save2(); draw(); });
     clearInterval(INBOX_TIMER);
     INBOX_TIMER = setInterval(() => { if (!document.getElementById("ibx")) { clearInterval(INBOX_TIMER); return; } if (S.start && !S.all && nextAt() !== null || S.start && !S.all) draw(false); }, 1000);
     draw();
