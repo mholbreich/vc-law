@@ -120,6 +120,7 @@ function weekView(n) {
   ${more.length ? `<details><summary>Other sources for this class (${more.length})</summary><ul class="list">${more.map((id) => item(id)).join("")}</ul></details>` : ""}
   ${cs ? `<h2>The case</h2><h3 style="margin-top:0">${ed("K." + ck(cs) + ".title", cs.title)}</h3><p>${ed("K." + ck(cs) + ".body", cs.body)}</p>` : ""}
   ${ex.map((e) => `<div class="ask"><p><b>${esc(e.title)}</b> · ${esc(e.role)}</p><p>${esc(e.prompt)}</p></div>`).join("")}
+  ${(window.INBOX || {})[n] ? `<a class="tw" href="#inbox-${n}"><span class="quiet">In class</span><b>Practice inbox</b><span class="quiet">${window.INBOX[n].mail.length} emails from the partner, the client and others. Reply to each one as you would in practice.</span><span class="go">Open the inbox →</span></a>` : ""}
   ${w.scenarios && w.scenarios.length ? `<h2>Try it in the tools</h2><p class="quiet" style="margin-top:0">Each button opens a tool set up for this class. It replaces the numbers you had in that tool.</p>${scenButtons(w)}` : w.tools.length ? `<p class="quiet">Tools: ${w.tools.map((t) => `<a href="#${t}">${TOOL[t]}</a>`).join(", ")}</p>` : ""}
   <p style="margin-top:36px;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap">${prev ? `<a href="#week-${prev.n}">← ${esc(prev.title)}</a>` : "<span></span>"}${next ? `<a href="#week-${next.n}">${esc(next.title)} →</a>` : ""}</p></div>`;
 }
@@ -898,16 +899,74 @@ main.addEventListener("click", (e) => {
   if (w && w.scenarios && w.scenarios[i]) runScenario(w.scenarios[i]);
 });
 
+/* ---------- Practice inbox (in-class, nothing is sent) ---------- */
+let INBOX_TIMER = null;
+function inboxView(n) {
+  const box = (window.INBOX || {})[n], w = WEEKS.find((x) => x.n === n);
+  if (!box || !w) return schedule();
+  const key = "vcl-inbox-" + n;
+  const S = store.get(key, { start: 0, open: "", sent: {}, all: false });
+  const save2 = () => store.set(key, S);
+  const elapsed = () => (S.start ? (Date.now() - S.start) / 60000 : -1);
+  const arrived = () => box.mail.filter((m) => S.all || (S.start && elapsed() >= m.at));
+  const nextAt = () => { const up = box.mail.filter((m) => !S.all && S.start && elapsed() < m.at); return up.length ? Math.min(...up.map((m) => m.at)) : null; };
+  const para = (t) => esc(t).split(/\n\n+/).map((x) => `<p>${x.replace(/\n/g, "<br>")}</p>`).join("");
+  function draw(paneToo = true) {
+    const el = document.getElementById("ibx"); if (!el) { clearInterval(INBOX_TIMER); return; }
+    const got = arrived(), na = nextAt();
+    if (S.open && !got.some((m) => m.id === S.open)) S.open = "";
+    const list = got.slice().reverse().map((m) => `<button type="button" class="ibm ${m.id === S.open ? "on" : ""} ${S.sent[m.id] ? "done" : ""}" data-open="${m.id}"><b>${esc(m.from)}</b><span>${esc(m.subject)}</span><small>${S.sent[m.id] ? "Replied" : "New"}</small></button>`).join("");
+    let status = "";
+    if (!S.start && !S.all) status = `<p>Press Start when your instructor says go. Emails will arrive over the next ${Math.max(...box.mail.map((m) => m.at))} minutes or so.</p><p><button type="button" id="ibstart">Start</button></p>`;
+    else if (na !== null) { const sec = Math.max(0, Math.round((na - elapsed()) * 60)); status = `<p class="quiet">Next email in ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}</p>`; }
+    const m = got.find((x) => x.id === S.open);
+    let pane = `<p class="quiet">${got.length ? "Pick an email on the left." : "No email yet."}</p>`;
+    if (m) {
+      const r = S.sent[m.id];
+      pane = `<div class="ibhead"><b>${esc(m.subject)}</b><span>From ${esc(m.from)}, ${esc(m.role)}</span></div><div class="ibbody">${para(m.body)}</div>`;
+      if (!r) pane += `<label class="f w">Your reply<textarea id="ibtext" rows="9" placeholder="Write your reply as you would send it.">${esc(S.draft && S.draft[m.id] || "")}</textarea></label><p><button type="button" id="ibsend">Send</button></p>`;
+      else pane += `<div class="ibsent"><span class="quiet">You replied</span>${para(r.text)}</div>
+        <div class="ibbody ibfollow"><div class="ibhead"><b>Re: ${esc(m.subject)}</b><span>From ${esc(m.follow.from)}</span></div>${para(m.follow.body)}</div>
+        <details><summary>What a strong reply does</summary><ul>${m.good.map((g) => `<li>${esc(g)}</li>`).join("")}</ul></details>
+        <details><summary>One way a senior lawyer might answer</summary><div class="ibbody">${para(m.model)}</div></details>
+        <p><button type="button" class="ghost" id="ibredo">Try this one again</button></p>`;
+    }
+    if (paneToo || !el.querySelector(".ibpane")) el.innerHTML = `<div class="ibstatus"></div><div class="inbox"><div class="iblist"></div><div class="ibpane">${pane}</div></div>`;
+    el.querySelector(".ibstatus").innerHTML = status;
+    el.querySelector(".iblist").innerHTML = list || '<p class="quiet">Inbox empty.</p>';
+  }
+  setTimeout(() => {
+    const el = document.getElementById("ibx");
+    el.addEventListener("input", (e) => { if (e.target.id === "ibtext") { S.draft = S.draft || {}; S.draft[S.open] = e.target.value; save2(); } });
+    el.addEventListener("click", (e) => {
+      const t = e.target.closest("button"); if (!t) return;
+      if (t.dataset.open) { S.open = t.dataset.open; save2(); draw(); }
+      if (t.id === "ibstart") { S.start = Date.now(); const first = box.mail.find((x) => x.at === 0); if (first) S.open = first.id; save2(); draw(); }
+      if (t.id === "ibsend") { const v = (document.getElementById("ibtext").value || "").trim(); if (!v) return; S.sent[S.open] = { text: v, at: Date.now() }; save2(); draw(); }
+      if (t.id === "ibredo") { delete S.sent[S.open]; save2(); draw(); }
+    });
+    document.getElementById("iball").addEventListener("click", () => { S.all = true; save2(); draw(); });
+    document.getElementById("ibreset").addEventListener("click", () => { S.start = 0; S.open = ""; S.sent = {}; S.draft = {}; S.all = false; save2(); draw(); });
+    clearInterval(INBOX_TIMER);
+    INBOX_TIMER = setInterval(() => { if (!document.getElementById("ibx")) { clearInterval(INBOX_TIMER); return; } if (S.start && !S.all && nextAt() !== null || S.start && !S.all) draw(false); }, 1000);
+    draw();
+  });
+  return `<div class="wide"><p class="quiet"><a href="#week-${n}">Class ${n}: ${esc(w.title)}</a> · Practice inbox</p>
+  <h1>Practice inbox</h1><p class="sub">${esc(box.intro)}</p>
+  <p class="quiet">Practice only. Your replies stay on this device and aren’t sent to anyone. <button type="button" class="linkish" id="iball">Show all emails now</button> · <button type="button" class="linkish" id="ibreset">Start over</button></p>
+  <div id="ibx"></div></div>`;
+}
+
 /* ---------- Router ---------- */
 const VIEWS = { home, schedule, syllabus: syllabusView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
 const SECTION = { syllabus: "home", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
-  const wk = /^week-(\d+)$/.exec(h);
-  const key = wk ? "schedule" : VIEWS[h] ? h : "home";
+  const wk = /^week-(\d+)$/.exec(h), ib = /^inbox-(\d+)$/.exec(h);
+  const key = wk || ib ? "schedule" : VIEWS[h] ? h : "home";
   if (key !== "dinners") stopDinners();
-  main.innerHTML = wk ? weekView(+wk[1]) : VIEWS[key]();
+  main.innerHTML = ib ? inboxView(+ib[1]) : wk ? weekView(+wk[1]) : VIEWS[key]();
   const sec = SECTION[key] || key;
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.s === sec));
   if (EDIT.on) applyEditMode();

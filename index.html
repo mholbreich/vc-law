@@ -198,6 +198,17 @@ details.amt{margin-top:18px}
 .intro{padding-top:26px}.intro .htag{font-size:clamp(20px,2.6vw,26px);line-height:1.35;margin:0 0 10px}.intro .facts{color:var(--mute)}
 .flag{display:block;margin:6px 0;padding:6px 10px;background:#fbefe6;border-left:3px solid var(--rock);font-size:15px;color:var(--ink)}
 #fmvf fieldset{display:grid;align-items:end;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px 14px;border:0;padding:0;margin:12px 0}#fmvf legend{font-weight:600;margin-bottom:6px}#fmvf label{font-size:14px}
+.wide{max-width:1120px}
+.inbox{display:grid;grid-template-columns:minmax(220px,320px) minmax(0,1fr);border:1px solid var(--line);border-radius:8px;min-height:420px;margin-top:10px}
+.iblist{border-right:1px solid var(--line);display:flex;flex-direction:column}
+.ibm{display:grid;text-align:left;background:transparent;color:var(--ink);border:0;border-bottom:1px solid var(--line);border-radius:0;padding:12px 14px;font-weight:400;min-height:0;gap:2px}
+.ibm b{font-weight:700}.ibm span{font-size:15px}.ibm small{color:var(--mute);font-size:13px}
+.ibm.on{background:var(--soft);box-shadow:inset 3px 0 0 var(--gold)}.ibm.done b{font-weight:500}
+.ibpane{padding:16px 20px;min-width:0}.ibhead{display:grid;gap:2px;margin-bottom:10px}.ibhead b{font-size:19px}.ibhead span{color:var(--mute);font-size:14px}
+.ibbody p{margin:0 0 10px}.ibsent{border-left:3px solid var(--line);padding-left:12px;margin:14px 0}.ibfollow{background:var(--soft);padding:12px 14px;margin:14px 0;border-top:3px solid var(--sky)}
+.ibpane textarea{width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:6px}
+.linkish{background:none;border:0;padding:0;min-height:0;color:var(--ink);text-decoration:underline;font-weight:400;font-size:inherit}
+@media(max-width:780px){.inbox{grid-template-columns:minmax(0,1fr)}.iblist{border-right:0;border-bottom:1px solid var(--line)}}
 </style>
 </head>
 <body>
@@ -210,6 +221,7 @@ details.amt{margin-top:18px}
 <script src="data.js"></script>
 <script src="sim.js"></script>
 <script src="assign.js"></script>
+<script src="inbox.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
