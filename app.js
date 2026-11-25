@@ -63,15 +63,16 @@ function thisWeekBox() {
 const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "syllabus.pdf")}" target="_blank" rel="noopener">Download the syllabus (PDF)</a>`;
 function home() {
   return `<section class="hero"><div class="hin"><h1>Venture Capital Law</h1>
-  <p class="htag">${ed("C.tagline", C.tagline)}</p>
-  <ul class="facts"><li><b>Spring 2027</b></li><li>Thursdays, ${esc(C.classTime)}</li><li>January 14 to April 22</li></ul></div>
+</div>
   <svg class="hills" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true"><path d="M0 100 L0 62 Q160 30 330 52 Q480 20 640 44 Q820 18 1000 40 L1000 100Z" fill="var(--pine)" opacity=".5"/></svg>
   <svg class="irons" viewBox="280 20 340 200" preserveAspectRatio="xMaxYMax meet" aria-hidden="true">
     <path d="M300 220 L395 52 L430 60 L410 220Z" fill="var(--rock)"/><path d="M395 52 L430 60 L425 80 Z" fill="#c9684c"/>
     <path d="M390 220 L478 34 L520 44 L500 220Z" fill="var(--rock)" opacity=".92"/><path d="M478 34 L520 44 L514 66 Z" fill="#c9684c"/>
     <path d="M480 220 L560 70 L600 80 L590 220Z" fill="var(--rock)" opacity=".85"/></svg>
   <svg class="ground" viewBox="0 0 1000 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 40 L0 20 Q250 4 500 16 Q750 4 1000 14 L1000 40Z" fill="var(--pine)"/></svg></section>
-  <div class="narrow">${thisWeekBox()}
+  <div class="narrow intro"><p class="htag">${ed("C.tagline", C.tagline)}</p>
+  <ul class="facts"><li><b>Spring 2027</b></li><li>Thursdays, ${esc(C.classTime)}</li><li>January 14 to April 22</li></ul>
+  ${thisWeekBox()}
   <p class="quiet" style="margin-top:22px"><a href="#syllabus">Syllabus, grading and policies</a> · <a href="${esc(C.bookingUrl)}" target="_blank" rel="noopener">Book office hours</a></p></div>`;
 }
 function schedule() {
