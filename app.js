@@ -164,6 +164,9 @@ function caseView() {
 const DEFAULT = {
   founders: [{ name: "Abigail", shares: 4e6 }, { name: "Bernard", shares: 4e6 }, { name: "Charlie", shares: 1.5e6 }],
   pool: 1e6,
+  grants: [{ name: "Dana (first engineer)", n: 250000, at: "Incorporation" }, { name: "Eli (head of product)", n: 200000, at: "Pre-seed" },
+    { name: "Farah (VP Sales)", n: 350000, at: "Seed" }, { name: "Gabe (engineer)", n: 150000, at: "Seed" },
+    { name: "Hana (CFO)", n: 400000, at: "Series A" }, { name: "Other employees (15)", n: 900000, at: "Series A" }, { name: "Other employees (25)", n: 1200000, at: "Series B" }],
   safes: [{ name: "Angel 1", inv: 3e5, cap: 8e6, disc: 0 }, { name: "Angel 2", inv: 2e5, cap: 10e6, disc: 0.2 }],
   Seed: { investor: "Seed lead", pre: 14e6, inv: 3e6, poolPost: 0.10 },
   A: { investor: "Series A lead", pre: 48e6, inv: 12e6, poolPost: 0.12 },
@@ -176,18 +179,32 @@ const save = () => store.set("vcl-cap-v2", ST);
 const TOOLS = [["captable", "Cap table"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
 const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}" class="${k === on ? "on" : ""}">${l}</a>`).join("")}</div>${SHARED ? `<p class="ask" style="margin-top:-12px">You opened a shared link, so these are the sender’s numbers. Press Start over to go back to the class defaults.</p>` : ""}<p class="sharerow"><button type="button" class="ghost" id="share">Copy link to these numbers</button><span class="quiet" id="sharemsg" aria-live="polite"></span></p><p class="quiet" id="sharebox" hidden></p>`;
 
+const GRANT_STAGES = ["Incorporation", "Pre-seed", "Seed", "Series A", "Series B"];
+// Options granted at a stage come out of the unallocated pool and are held by named employees.
+function grantAt(state, st, stage) {
+  const holders = state.holders.map((h) => ({ ...h })); let pool = state.pool;
+  (st.grants || []).filter((g) => g.at === stage && +g.n > 0).forEach((g) => {
+    const n = Math.min(+g.n, Math.max(0, pool)); if (n <= 0) return;
+    holders.push({ name: g.name, cls: "Options", shares: n, option: true }); pool -= n;
+  });
+  return { ...state, holders, pool };
+}
 function computeCap(st) {
-  const s0 = { holders: st.founders.map((f) => ({ name: f.name, cls: "Common", shares: +f.shares || 0 })), pool: +st.pool || 0 };
+  const s0 = grantAt({ holders: st.founders.map((f) => ({ name: f.name, cls: "Common", shares: +f.shares || 0 })), pool: +st.pool || 0 }, st, "Incorporation");
+  const pre = grantAt(s0, st, "Pre-seed");
   const safes = st.safes.filter((s) => s.inv > 0);
   // Angel stage: what the capped SAFEs would own if they converted at their caps (an estimate; they hold no shares yet).
   const capped = safes.filter((s) => s.cap > 0);
   const frac = SIM.sum(capped.map((s) => s.inv / s.cap));
-  const S0 = SIM.sum(s0.holders.map((h) => h.shares)) + s0.pool;
+  const S0 = SIM.sum(pre.holders.map((h) => h.shares)) + pre.pool;
   const Ccap = frac < 1 ? S0 / (1 - frac) : S0;
-  const angelEst = { holders: s0.holders.concat(capped.map((s) => ({ name: s.name, cls: "Seed", shares: s.inv / s.cap * Ccap }))), pool: s0.pool };
-  const seed = SIM.pricedRound(s0, safes, { ...st.Seed, cls: "Seed" });
-  const a = SIM.pricedRound({ holders: seed.holders, pool: seed.pool }, [], { ...st.A, cls: "A" });
-  const b = SIM.pricedRound({ holders: a.holders, pool: a.pool }, [], { ...st.B, cls: "B" });
+  const angelEst = { holders: pre.holders.concat(capped.map((s) => ({ name: s.name, cls: "Seed", shares: s.inv / s.cap * Ccap }))), pool: pre.pool };
+  const seedR = SIM.pricedRound(pre, safes, { ...st.Seed, cls: "Seed" });
+  const seed = { ...seedR, ...grantAt(seedR, st, "Seed") };
+  const aR = SIM.pricedRound({ holders: seed.holders, pool: seed.pool }, [], { ...st.A, cls: "A" });
+  const a = { ...aR, ...grantAt(aR, st, "Series A") };
+  const bR = SIM.pricedRound({ holders: a.holders, pool: a.pool }, [], { ...st.B, cls: "B" });
+  const b = { ...bR, ...grantAt(bR, st, "Series B") };
   const last = SIM.secondary(b, st.B.seller, st.B.investor, +st.B.sec || 0, "Common");
   last.post = b.post;
   const stages = [
@@ -198,6 +215,12 @@ function computeCap(st) {
     { name: "Series B", s: last, r: b, round: st.B }
   ];
   return { stages, last, seed, a, b };
+}
+// Ownership with every employee's granted options shown as one slice, for the pies.
+function ownG(state) {
+  const opt = state.holders.filter((h) => h.option), rest = state.holders.filter((h) => !h.option);
+  const holders = opt.length ? rest.concat([{ name: "Options granted", cls: "Options", shares: SIM.sum(opt.map((h) => h.shares)) }]) : rest;
+  return SIM.ownership({ ...state, holders });
 }
 const colorMap = (names) => { const m = {}; names.forEach((n, i) => (m[n] = PAL[i % PAL.length])); return m; };
 function bind(root, obj, after) {
@@ -223,7 +246,7 @@ function capRows(stage) {
   const s = stage.s, total = SIM.sum(s.holders.map((h) => h.shares)) + s.pool, rows = {}, order = [];
   s.holders.forEach((h) => {
     const key = h.name.replace(/ \(secondary\)$/, "");
-    if (!rows[key]) { rows[key] = { name: key, by: {}, inv: 0, founder: ST.founders.some((f) => f.name === key) }; order.push(key); }
+    if (!rows[key]) { rows[key] = { name: key, by: {}, inv: 0, founder: ST.founders.some((f) => f.name === key), emp: !!h.option }; order.push(key); }
     rows[key].by[h.cls] = (rows[key].by[h.cls] || 0) + h.shares;
     rows[key].inv += h.secondary ? 0 : h.invested || 0;
   });
@@ -250,25 +273,37 @@ function drawCarta() {
   let h = `<div class="seg" role="group" aria-label="Show the cap table as of">${out.stages.map((s) => `<button type="button" class="${s === stage ? "on" : ""}" data-asof="${esc(s.name)}">${esc(s.name)}</button>`).join("")}</div>
   <div class="kpis"><div><b>${num(total)}</b><span>Fully diluted shares</span></div><div><b>${latestR ? money(latestR.r.price) : "—"}</b><span>${latestR ? esc(latestR.name) + " price per share" : "No priced round yet"}</span></div><div><b>${latestR ? money(latestR.r.post) : "—"}</b><span>Post-money valuation</span></div><div><b>${money(raised + (stage.est ? SIM.sum(stage.safes.map((s) => s.inv)) : 0))}</b><span>Total raised</span></div></div>`;
   h += `<div class="scroll"><table class="carta"><thead><tr><th>Stakeholder</th>${used.map(([, l]) => `<th class="n">${l}</th>`).join("")}<th class="n">Options</th><th class="n">Fully diluted</th><th class="n">FD %</th><th class="n">Invested</th></tr></thead><tbody>`;
-  const row = (r) => `<tr><td>${esc(r.name)}${stage.est && !r.founder ? ' <span class="tag">as converted</span>' : ""}</td>${used.map(([c]) => `<td class="n">${cell(r.by[c])}</td>`).join("")}<td class="n"></td><td class="n">${num(r.fd)}</td><td class="n">${pct(r.pct)}</td><td class="n">${r.inv ? money(r.inv) : ""}</td></tr>`;
-  const f = list.filter((r) => r.founder), inv = list.filter((r) => !r.founder);
+  const row = (r) => `<tr><td>${esc(r.name)}${stage.est && !r.founder ? ' <span class="tag">as converted</span>' : ""}</td>${used.map(([c]) => `<td class="n">${cell(r.by[c])}</td>`).join("")}<td class="n">${cell(r.by.Options)}</td><td class="n">${num(r.fd)}</td><td class="n">${pct(r.pct)}</td><td class="n">${r.inv ? money(r.inv) : ""}</td></tr>`;
+  const f = list.filter((r) => r.founder), emp = list.filter((r) => r.emp), inv = list.filter((r) => !r.founder && !r.emp);
+  const granted = SIM.sum(emp.map((r) => r.by.Options || 0));
   h += `<tr class="grp"><td colspan="${used.length + 5}">Founders</td></tr>` + f.map(row).join("");
   if (inv.length) h += `<tr class="grp"><td colspan="${used.length + 5}">Investors</td></tr>` + inv.map(row).join("");
-  h += `<tr class="grp"><td colspan="${used.length + 5}">Equity plan</td></tr><tr><td>Option pool (granted and available)</td>${used.map(() => `<td class="n"></td>`).join("")}<td class="n">${num(pool)}</td><td class="n">${num(pool)}</td><td class="n">${pct(pool / total)}</td><td class="n"></td></tr>`;
-  h += `<tr class="tot"><td>Total</td>${used.map(([c]) => `<td class="n">${num(tot(c))}</td>`).join("")}<td class="n">${num(pool)}</td><td class="n">${num(total)}</td><td class="n">100%</td><td class="n">${money(raised)}</td></tr></tbody></table></div>`;
+  h += `<tr class="grp"><td colspan="${used.length + 5}">Option holders</td></tr>` + (emp.length ? emp.map(row).join("") : `<tr><td colspan="${used.length + 5}" class="quiet">No options granted yet.</td></tr>`);
+  h += `<tr><td>Available for grant</td>${used.map(() => `<td class="n"></td>`).join("")}<td class="n">${num(pool)}</td><td class="n">${num(pool)}</td><td class="n">${pct(pool / total)}</td><td class="n"></td></tr>`;
+  h += `<tr class="tot"><td>Total</td>${used.map(([c]) => `<td class="n">${num(tot(c))}</td>`).join("")}<td class="n">${num(pool + granted)}</td><td class="n">${num(total)}</td><td class="n">100%</td><td class="n">${money(raised)}</td></tr></tbody></table></div>`;
   if (stage.est && stage.safes.length) {
     h += `<h3>SAFEs outstanding</h3><p class="quiet">SAFEs aren’t shares yet. They convert into Seed Preferred at the Seed round. The table above shows what the capped SAFEs would own if they converted at their caps today.</p>
     <div class="scroll"><table class="carta"><thead><tr><th>Holder</th><th class="n">Amount</th><th class="n">Valuation cap</th><th class="n">Discount</th><th>Type</th></tr></thead><tbody>${stage.safes.map((s) => `<tr><td>${esc(s.name)}</td><td class="n">${money(s.inv)}</td><td class="n">${s.cap ? money(s.cap) : "None"}</td><td class="n">${s.disc ? pct(s.disc, 0) : "None"}</td><td>Post-money SAFE</td></tr>`).join("")}</tbody></table></div>`;
   }
+  h += `<h3>Option grants</h3><p class="quiet">Each grant comes out of the unallocated pool at the stage you pick, so it shows from that stage on. If the pool runs short, the grant is cut to what is left. A round’s pool top-up is sized on the unallocated pool.</p>
+  <form id="grants" onsubmit="return false"><div class="scroll"><table class="carta"><thead><tr><th>Employee</th><th class="n">Options</th><th>Granted at</th><th></th></tr></thead><tbody>${(ST.grants || []).map((g, i) => `<tr><td><input type="text" data-g="${i}" data-f="name" value="${esc(g.name)}" aria-label="Employee name"></td><td class="n"><input type="number" step="1000" min="0" data-g="${i}" data-f="n" value="${+g.n}" aria-label="Options" style="max-width:9em"></td><td><select data-g="${i}" data-f="at" aria-label="Granted at">${GRANT_STAGES.map((st) => `<option ${st === g.at ? "selected" : ""}>${st}</option>`).join("")}</select></td><td><button type="button" class="ghost" data-gdel="${i}" aria-label="Remove ${esc(g.name)}">Remove</button></td></tr>`).join("")}</tbody></table></div>
+  <p><button type="button" class="ghost" id="gadd">Add a grant</button></p></form>`;
   h += `<p style="margin-top:18px"><button type="button" class="ghost" id="csv">Download as a spreadsheet</button></p>`;
   el.innerHTML = h;
+  el.onchange = (e) => {
+    const t = e.target; if (t.dataset.g === undefined) return;
+    const g = ST.grants[+t.dataset.g]; if (!g) return;
+    g[t.dataset.f] = t.dataset.f === "n" ? Math.max(0, +t.value || 0) : t.value; save(); drawCarta();
+  };
   el.onclick = (e) => {
     const a = e.target.dataset && e.target.dataset.asof; if (a) { ASOF = a; drawCarta(); }
+    if (e.target.dataset && e.target.dataset.gdel !== undefined) { ST.grants.splice(+e.target.dataset.gdel, 1); save(); drawCarta(); return; }
+    if (e.target.id === "gadd") { ST.grants = ST.grants || []; ST.grants.push({ name: "New hire", n: 50000, at: ASOF }); save(); drawCarta(); return; }
     if (e.target.id === "csv") {
       const q = (v) => `"${String(v).replace(/"/g, '""')}"`;
       const lines = [["Stakeholder", ...used.map(([, l]) => l), "Options and pool", "Fully diluted", "Ownership", "Invested"]]
-        .concat(list.map((r) => [r.name, ...used.map(([c]) => Math.round(r.by[c] || 0)), "", Math.round(r.fd), (r.pct * 100).toFixed(2) + "%", Math.round(r.inv)]))
-        .concat([["Option pool", ...used.map(() => ""), Math.round(pool), Math.round(pool), (pool / total * 100).toFixed(2) + "%", ""]]);
+        .concat(list.map((r) => [r.name, ...used.map(([c]) => Math.round(r.by[c] || 0)), Math.round(r.by.Options || 0), Math.round(r.fd), (r.pct * 100).toFixed(2) + "%", Math.round(r.inv)]))
+        .concat([["Available for grant", ...used.map(() => ""), Math.round(pool), Math.round(pool), (pool / total * 100).toFixed(2) + "%", ""]]);
       const url = URL.createObjectURL(new Blob([lines.map((l) => l.map(q).join(",")).join("\n")], { type: "text/csv" }));
       const link = document.createElement("a"); link.href = url; link.download = `Mostly Human AI cap table - ${stage.name}.csv`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
     }
@@ -337,12 +372,12 @@ function paintDil() {
 function drawDil() {
   const res = document.getElementById("res"), br = document.getElementById("byround"); if (!res) return;
   let out; try { out = computeCap(ST); } catch (e) { res.innerHTML = BAD; br.innerHTML = ""; return; }
-  const all = [...new Set(out.stages.flatMap((s) => s.s.holders.map((h) => h.name)))].concat("Option pool");
+  const all = [...new Set(out.stages.flatMap((s) => ownG(s.s).rows.map((r) => r.name)))].filter((n) => n !== "Option pool").concat("Option pool");
   const col = colorMap(all);
   const isF = (n) => ST.founders.some((f) => f.name === n);
   const fo = (s) => SIM.sum(SIM.ownership(s).rows.filter((r) => isF(r.name)).map((r) => r.pct));
   const k = out.stages.findIndex((s) => s.name === DSTAGE), st = out.stages[k], prev = out.stages[k - 1];
-  const rows = SIM.ownership(st.s).rows.filter((r) => r.shares > 0);
+  const rows = ownG(st.s).rows.filter((r) => r.shares > 0);
   let h = `<p class="quiet" style="margin:0">After ${esc(st.name === "Incorporation" ? "incorporation" : "the " + st.name)}, the founders own</p><div class="big">${pct(fo(st.s))}</div>
   <p class="quiet">${prev ? `down from ${pct(fo(prev.s))} before this stage` : "of the fully diluted company"}</p>
   ${st.r ? `<div class="kpis"><div><b>${money(st.r.price)}</b><span>Price per share</span></div><div><b>${money(st.r.post)}</b><span>Post-money</span></div><div><b>${money(st.r.effectivePre)}</b><span>Effective pre-money</span></div></div>` : ""}
@@ -350,9 +385,9 @@ function drawDil() {
   <ul class="plegend">${rows.map((r) => `<li><i style="background:${col[r.name]}"></i><span>${esc(r.name)}</span><b>${pct(r.pct)}</b></li>`).join("")}</ul></div>`;
   if (st.name === "Seed") h += `<p class="quiet">SAFE conversion prices: ${out.seed.safePrices.map((p, i) => esc(ST.safes.filter((s) => s.inv > 0)[i].name) + " " + money(p)).join(", ") || "no SAFEs"}.</p>`;
   res.innerHTML = h;
-  br.innerHTML = `<div class="pies">${out.stages.map((s) => `<button type="button" class="minipie ${s.name === DSTAGE ? "on" : ""}" data-stage="${esc(s.name)}"><span class="pie">${pieSvg(SIM.ownership(s.s).rows, col, "Ownership after " + s.name)}</span><b>${esc(s.name)}</b><span class="quiet">Founders ${pct(fo(s.s))}</span></button>`).join("")}</div>
+  br.innerHTML = `<div class="pies">${out.stages.map((s) => `<button type="button" class="minipie ${s.name === DSTAGE ? "on" : ""}" data-stage="${esc(s.name)}"><span class="pie">${pieSvg(ownG(s.s).rows, col, "Ownership after " + s.name)}</span><b>${esc(s.name)}</b><span class="quiet">Founders ${pct(fo(s.s))}</span></button>`).join("")}</div>
   <div class="legend">${all.map((n) => `<span><i style="background:${col[n]}"></i>${esc(n)}</span>`).join("")}</div>
-  <div class="scroll"><table><thead><tr><th>Holder</th>${out.stages.map((s) => `<th class="n">${esc(s.name)}</th>`).join("")}</tr></thead><tbody>${all.map((n) => `<tr><td>${esc(n)}</td>${out.stages.map((s) => { const r = SIM.ownership(s.s).rows.find((x) => x.name === n); return `<td class="n">${r && r.shares ? pct(r.pct) : "—"}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
+  <div class="scroll"><table><thead><tr><th>Holder</th>${out.stages.map((s) => `<th class="n">${esc(s.name)}</th>`).join("")}</tr></thead><tbody>${all.map((n) => `<tr><td>${esc(n)}</td>${out.stages.map((s) => { const r = ownG(s.s).rows.find((x) => x.name === n); return `<td class="n">${r && r.shares ? pct(r.pct) : "—"}</td>`; }).join("")}</tr>`).join("")}</tbody></table></div>
   <p class="quiet">Pre-seed shows the SAFEs as if converted at their caps. See every holder’s shares on the <a href="#captable">Cap table</a> tab.</p>`;
 }
 
@@ -444,7 +479,7 @@ function termsheets() {
   const best = (vals, i) => vals[i] === Math.max(...vals);
   const short = (t) => t.name.replace(/:.*$/, "");
   const pref = (t) => t.pref + "×" + (t.participating ? `, participating${t.cap ? ` to ${t.cap}×` : ""}` : ", non-participating");
-  const rows = SIM.ownership(c.r).rows.filter((r) => r.shares > 0);
+  const rows = ownG(c.r).rows.filter((r) => r.shares > 0);
   const terms = [["Pre-money", money(c.t.pre)], ["Raise", money(c.t.inv)], ["Option pool after", pct(c.t.pool, 0)], ["Preference", pref(c.t)], ["Anti-dilution", c.t.antidilution], ["Board", c.t.board], ["Protective provisions", c.t.protective], ["Other", c.t.other]];
   setTimeout(() => {
     document.getElementById("tsw").addEventListener("click", (e) => { const b = e.target.closest("[data-ts]"); if (b) { TSEL = b.dataset.ts; store.set("vcl-tsel", TSEL); route(); } });
@@ -461,7 +496,7 @@ function termsheets() {
     <div class="piewrap"><div class="pie">${pieSvg(rows, col, "Ownership after " + c.t.name)}</div><ul class="plegend">${rows.map((r) => `<li><i style="background:${col[r.name]}"></i><span>${esc(r.name)}</span><b>${pct(r.pct)}</b></li>`).join("")}</ul></div>
     <h3>What the founders get in a sale</h3>${exits.map((e, i) => `<div class="hrow"><span>${money(e)} sale</span><div class="track"><div style="width:${(c.pays[i] / e) * 100}%;background:var(--pine)"></div></div><span class="v">${money(c.pays[i])}</span></div>`).join("")}</div></div>
   <h2 style="margin-top:40px">Side by side</h2>
-  <div class="pies" style="grid-template-columns:repeat(3,minmax(0,1fr))">${calc.map((x) => `<button type="button" class="minipie ${x === c ? "on" : ""}" data-ts="${esc(x.t.id)}"><span class="pie">${pieSvg(SIM.ownership(x.r).rows, col, "Ownership after " + x.t.name)}</span><b>${esc(short(x.t))}</b><span class="quiet">Founders ${pct(x.fo)}</span></button>`).join("")}</div>
+  <div class="pies" style="grid-template-columns:repeat(3,minmax(0,1fr))">${calc.map((x) => `<button type="button" class="minipie ${x === c ? "on" : ""}" data-ts="${esc(x.t.id)}"><span class="pie">${pieSvg(ownG(x.r).rows, col, "Ownership after " + x.t.name)}</span><b>${esc(short(x.t))}</b><span class="quiet">Founders ${pct(x.fo)}</span></button>`).join("")}</div>
   <div class="legend">${names.map((n) => `<span><i style="background:${col[n]}"></i>${esc(n)}</span>`).join("")}</div>
   <div class="scroll"><table><thead><tr><th></th>${calc.map((x) => `<th class="n">${esc(short(x.t))}</th>`).join("")}</tr></thead><tbody>
   ${row("Pre-money", (x) => money(x.t.pre))}
