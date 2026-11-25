@@ -97,6 +97,7 @@ window.WEEKS = [
     scenarios: [{ label: "Who holds the votes after the Series A", tool: "captable", asof: "Series A" }],
     tools: [], caseCh: "dispute", exercises: ["ex-governance"] },
   { n: 7, date: "Feb 25", stage: "market", title: "The Life of a Venture Capitalist and the Fund",
+    dateNote: "Time may change: this class may start later that Thursday or move to Friday, Feb 26. Watch this page for the final time.",
     focus: "Career and daily work of a VC: sourcing, theses, diligence, investment committees, portfolio support, LP relations. Fund formation and economics: LPA, GP/LP structure, management fees, carry, side letters, fundraising constraints. The market right now: fundraising, valuations, capital concentration and exits.",
     guest: "VC general partner and/or fund formation lawyer",
     prep: "Sample fund term summary/LPA excerpts; investment committee memo.",

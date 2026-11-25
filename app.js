@@ -45,7 +45,7 @@ function item(id, withClass) {
 /* ---------- Course ---------- */
 function schedRow(w, glance) {
   const i = WEEKS.indexOf(w);
-  return `<li><div class="dt">${esc(w.date)}<small>Class ${w.n}</small></div><div><a class="tt" href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a>${glance ? `<p class="quiet">Guest: ${esc(w.guest)}</p>` : `
+  return `<li><div class="dt">${esc(w.date)}<small>Class ${w.n}</small></div><div><a class="tt" href="#week-${w.n}">${ed("W." + i + ".title", w.title)}</a>${w.dateNote ? `<p class="flag">${ed("W." + WEEKS.indexOf(w) + ".dateNote", w.dateNote)}</p>` : ""}${glance ? `<p class="quiet">Guest: ${esc(w.guest)}</p>` : `
     <p><span class="k">Practice.</span> ${ed("W." + i + ".focus", w.focus)}</p>
     <p><span class="k">Lived Experience.</span> ${ed("W." + i + ".guest", w.guest)}${w.proposedGuests ? ` <span class="quiet">(proposed: ${esc(w.proposedGuests)})</span>` : ""}</p>`}</div></li>`;
 }
@@ -58,7 +58,7 @@ function scenButtons(w) {
 function thisWeekBox() {
   const w = currentWeek(); if (!w) return "";
   const first = WEEKS.indexOf(w) === 0 && new Date() < new Date("Jan 7, 2027");
-  return `<a class="tw" href="#week-${w.n}"><span class="quiet">${first ? "First class" : "This week"} · Thursday, ${esc(w.date)}</span><b>${esc(w.title)}</b><span class="go">What to read and do →</span></a>${C.thisWeekNote ? `<p class="ask">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}`;
+  return `<a class="tw" href="#week-${w.n}"><span class="quiet">${first ? "First class" : "This week"} · Thursday, ${esc(w.date)}</span><b>${esc(w.title)}</b>${w.dateNote ? `<span class="flag">${esc(w.dateNote)}</span>` : ""}<span class="go">What to read and do →</span></a>${C.thisWeekNote ? `<p class="ask">${ed("C.thisWeekNote", C.thisWeekNote)}</p>` : ""}`;
 }
 const pdfLink = (cls) => `<a class="${cls || "btn"}" href="${esc(C.publicUrl + "syllabus.pdf")}" target="_blank" rel="noopener">Download the syllabus (PDF)</a>`;
 function home() {
@@ -87,7 +87,7 @@ function schedule() {
 function syllabusView() {
   const rows = WEEKS.map((w) => {
     const rd = w.readings.filter((id) => R[id] && R[id].status !== "suggested").map((id) => esc(R[id].t));
-    return `<tr><td>${w.n}</td><td style="white-space:nowrap">${esc(w.date)}</td><td><b>${esc(w.title)}</b><br>${esc(w.focus)}<br><span class="quiet">Guest: ${esc(w.guest)}</span><br>Before class: ${esc(w.prep)}${rd.length ? `<br>Readings: ${rd.join("; ")}` : ""}</td></tr>`;
+    return `<tr><td>${w.n}</td><td style="white-space:nowrap">${esc(w.date)}</td><td><b>${esc(w.title)}</b><br>${w.dateNote ? `<i>${esc(w.dateNote)}</i><br>` : ""}${esc(w.focus)}<br><span class="quiet">Guest: ${esc(w.guest)}</span><br>Before class: ${esc(w.prep)}${rd.length ? `<br>Readings: ${rd.join("; ")}` : ""}</td></tr>`;
   });
   rows.splice(WEEKS.findIndex((w) => w.n === 10), 0, `<tr><td></td><td>Mar 18</td><td>Spring break, no class</td></tr>`);
   return `<div class="narrow syl"><p class="noprint">${pdfLink()}</p><h1>Venture Capital Law</h1>
@@ -111,7 +111,7 @@ function weekView(n) {
   const ex = EX.filter((e) => e.week === n);
   const TOOL = { captable: "Cap table", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
   return `<div class="narrow"><p class="quiet"><a href="#schedule">Schedule</a> · Class ${w.n} · Thursday, ${esc(w.date)}, ${esc(C.classTime)}</p>
-  <h1>${ed("W." + WEEKS.indexOf(w) + ".title", w.title)}</h1>
+  <h1>${ed("W." + WEEKS.indexOf(w) + ".title", w.title)}</h1>${w.dateNote ? `<p class="flag">${ed("W." + WEEKS.indexOf(w) + ".dateNote", w.dateNote)}</p>` : ""}
   <div class="halves"><div class="half"><h3>The Practice of Venture Capital Law</h3><p>${ed("W." + WEEKS.indexOf(w) + ".focus", w.focus)}</p></div>
   <div class="half"><h3>The Lived Experience of Venture Capital</h3><p>${ed("W." + WEEKS.indexOf(w) + ".guest", w.guest)}.${w.proposedGuests ? ` Proposed: ${esc(w.proposedGuests)}.` : " Guest to be announced."}</p></div></div>
   <h2>Before class</h2><p>${ed("W." + WEEKS.indexOf(w) + ".prep", w.prep)}</p>
