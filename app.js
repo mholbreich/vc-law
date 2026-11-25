@@ -123,7 +123,7 @@ function weekView(n) {
 }
 
 /* ---------- Library ---------- */
-const GROUPS = [["Resource", "Resources"], ["Form", "Forms"], ["Book", "Books"], ["Tax authority", "Tax"], ["Securities rule", "Securities and funds"], ["Ethics", "Professional responsibility"], ["Market data", "Market research"]];
+const GROUPS = [["Resource", "Resources"], ["Form", "Forms"], ["Book", "Books"], ["Essay", "Essays"], ["Tax authority", "Tax"], ["Securities rule", "Securities and funds"], ["Ethics", "Professional responsibility"], ["Market data", "Market research"]];
 let LIB = { g: "", q: "" };
 function library() {
   setTimeout(() => {
