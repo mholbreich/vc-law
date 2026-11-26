@@ -264,8 +264,7 @@ window.DINNER_INFO = {
   "Taylor Sargent and Mason Angel": { org: "Industrious Ventures", blurb: "Two defense and space investors. Taylor was a NASA scientist and managed DARPA investments; Mason founded the fund." },
   "David Cohen": { org: "Collaborative Fund", blurb: "General partner and general counsel at Collaborative Fund, a New York consumer fund with over $2 billion under management." },
   "Erick Rabin": { org: "GCVC and Bilt", blurb: "General partner at GCVC, a fund backed by general counsels, and general counsel of Bilt, a $10 billion fintech." },
-  "Megan Baier": { org: "Wilson Sonsini", blurb: "Co-CEO and chairwoman of Wilson Sonsini, the leading Silicon Valley law firm for startups and venture capital." },
-  "Jamie Anderson": { org: "Midi Health", blurb: "Chief legal officer of Midi Health, and a healthcare lawyer for more than 20 years." },
+  "Megan Baier and Jamie Anderson": { org: "Wilson Sonsini and Midi Health", blurb: "Megan is co-CEO and chairwoman of Wilson Sonsini, the leading Silicon Valley law firm for startups and venture capital. Jamie is chief legal officer of Midi Health and has been a healthcare lawyer for more than 20 years." },
   "Elliott Portnoy": { org: "Dentons", blurb: "Founding global CEO of Dentons, which he built into the world’s largest law firm by headcount." },
   "Michelle Longmire": { org: "Medable", blurb: "CEO and co-founder of Medable, which runs clinical trials patients can join from home. She has raised about $500 million in venture capital." },
   // Not confirmed yet; add to dinners.json too if he says yes.
