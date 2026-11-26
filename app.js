@@ -687,186 +687,90 @@ function guestsView() {
     <p>${ed("G." + gi + ".bio", g.bio)}</p>${g.with ? `<p class="quiet">Same session as ${esc(g.with)}.</p>` : ""}${g.li ? `<a class="li" href="${esc(g.li)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}</div></li>`).join("")}</ul></div>`;
 }
 
-/* ---------- Dinners ----------
-   Sign-ups come from a Google Form. Its answers live in the "VC Law Dinners"
-   Google Sheet, which the owner's view reads through the Google Drive
-   connector. Everyone else sees the dinners, the form link and, once posted,
-   the schedule, all from the shared store. */
-const SHEET_ID = window.COURSE.dinnerSheetId;
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/edit";
-const DN = { db: null, owner: false, dinners: [], form: null, assign: null, subs: [], signups: [], bad: [], result: null, sync: "idle", syncMsg: "", syncedAt: 0, msg: "", loading: true };
-function stopDinners() { DN.subs.forEach((u) => u()); DN.subs = []; }
+/* ---------- Dinners: tap to rank ----------
+   Sign-ups go to a small Google Apps Script web app attached to the
+   "VC Law Dinners" sheet (dinners/dinner-signup.gs). The sheet holds the
+   dinners, the picks and the matching. Until the web app's URL is set in
+   COURSE.dinnerApi, the page shows a preview. */
+const DMAX = 5;
+const DS = { list: null, status: "preview", counts: {}, err: "", sent: null, busy: false,
+  picks: store.get("vcl-dn-picks", []), name: store.get("vcl-dn-name", ""), email: store.get("vcl-dn-email", ""), done: store.get("vcl-dn-done", false) };
+function stopDinners() {}
 function dinnersView() {
-  setTimeout(startDinners);
+  setTimeout(loadDinners);
   return `<div class="narrow"><h1>Dinners</h1>
-  <p class="sub">Small dinners of about six students, each with one of our guests, at ${esc(C.dinnerTime)} after class. Put in your name, rank your top five, and seats are assigned so that as many people as possible get one of their top choices.</p>
+  <p class="sub">Small dinners of about six students with one of our guests, at ${esc(C.dinnerTime)} after class. Tap the dinners you’d most like to join, in order. That’s it.</p>
   <div id="dn"><p class="quiet">Loading…</p></div></div>`;
 }
-async function startDinners() {
-  stopDinners();
-  DN.loading = true;
-  const timer = setTimeout(() => { if (DN.loading) { DN.loading = false; DN.msg = "The dinner list can’t be reached right now. Try again in a little while."; drawDn(); } }, 10000);
-  DN.db = (await window.claude?.use?.("db")) || null;
-  const user = (await window.claude?.use?.("user")) || null;
-  if (!DN.db) { clearTimeout(timer); DN.loading = false; DN.msg = ""; drawDn(); return; }
-  DN.owner = (await user?.isOwner?.()) ?? false;
-  const done = () => { if (DN.loading) { DN.loading = false; clearTimeout(timer); } drawDn(); };
-  const err = () => { DN.loading = false; clearTimeout(timer); drawDn(); };
-  DN.subs.push(DN.db.collection("dinners").onSnapshot((q) => { DN.dinners = q.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || String(a.title).localeCompare(String(b.title))); done(); }, err));
-  DN.subs.push(DN.db.doc("assign/current").onSnapshot((d) => { DN.assign = d.exists ? d.data() : null; done(); }, err));
-  DN.subs.push(DN.db.doc("assign/form").onSnapshot((d) => { DN.form = d.exists ? d.data() : null; done(); }, err));
-  if (DN.owner && DN.sync === "idle") syncSheet();
-}
-
-/* Read the sheet's text (markdown tables, one per tab) into rows. */
-function parseSheetText(text) {
-  const tabs = []; let cur = null;
-  String(text || "").split("\n").forEach((line) => {
-    const m = /^### Sheet Name:\s*(.*)$/.exec(line);
-    if (m) { cur = { name: m[1].trim(), rows: [] }; tabs.push(cur); return; }
-    if (/^### /.test(line) && !/^### Table (Range|Sample Data)/.test(line)) { cur = null; return; }
-    if (!cur || !/^\s*\|/.test(line)) return;
-    const cells = line.trim().replace(/^\|/, "").replace(/\|$/, "").split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\(.)/g, "$1"));
-    if (cells.every((c) => /^:?-*:?$/.test(c))) return;
-    cur.rows.push(cells);
-  });
-  tabs.forEach((t) => { t.rows = t.rows.filter((r) => r.some((c) => c)); t.head = (t.rows.shift() || []).map((h) => h.toLowerCase()); });
-  return tabs;
-}
-const slug = (s) => String(s).toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "dinner";
-function readSheet(text) {
-  const tabs = parseSheetText(text);
-  const dt = tabs.find((t) => t.head.includes("guest")) || tabs[0];
-  if (!dt) throw new Error("no_tabs");
-  const gi = dt.head.indexOf("guest"), si = dt.head.indexOf("seats"), fi = dt.head.indexOf("form link");
-  const dinners = [], seen = {};
-  dt.rows.forEach((r) => {
-    const name = (r[gi < 0 ? 0 : gi] || "").trim(); if (!name || seen[name.toLowerCase()]) return; seen[name.toLowerCase()] = 1;
-    dinners.push({ id: slug(name), host: name, title: "Dinner with " + name, cap: Math.max(1, parseInt(r[si], 10) || 6), order: dinners.length });
-  });
-  const formUrl = fi < 0 ? "" : (dt.rows.map((r) => r[fi] || "").find((v) => /^https:\/\//.test(v)) || "");
-  const rt = tabs.find((t) => t.head.includes("your name"));
-  const latest = {}, bad = [];
-  if (rt) {
-    const ni = rt.head.indexOf("your name"), ci = rt.head.map((h, i) => (/choice/.test(h) ? i : -1)).filter((i) => i >= 0);
-    const byName = (v) => { const q = v.trim().toLowerCase(); return q ? (dinners.find((d) => d.host.toLowerCase() === q) || {}).id || null : null; };
-    rt.rows.forEach((r) => {
-      const name = (r[ni] || "").trim().slice(0, 80); if (!name) return;
-      const picks = ci.map((i) => r[i] || "").filter((v) => v.trim());
-      const ranks = [...new Set(picks.map(byName).filter(Boolean))];
-      picks.filter((v) => !byName(v)).forEach((v) => bad.push(`${name}: ${v}`));
-      latest[name.toLowerCase()] = { id: "s-" + slug(name) + "-" + Object.keys(latest).length, name, ranks };
-    });
+async function loadDinners() {
+  const api = C.dinnerApi;
+  if (api) {
+    try {
+      const r = await fetch(api, { cache: "no-store" }); const j = await r.json();
+      DS.list = (j.dinners || []).map((d) => ({ guest: d.guest, date: d.date || "", seats: d.seats || 6 }));
+      DS.status = j.status || "open"; DS.counts = j.firstChoiceCounts || {}; DS.err = "";
+    } catch (e) { DS.err = "offline"; }
   }
-  return { dinners, formUrl, signups: Object.values(latest), bad, hasResponses: !!rt };
-}
-async function syncSheet() {
-  DN.sync = "busy"; DN.syncMsg = ""; drawDn();
-  const mcp = await window.claude?.use?.("mcp");
-  if (!mcp) { DN.sync = "off"; DN.syncMsg = "This view can’t reach your Google Drive. Open the site on claude.ai while signed in."; drawDn(); return; }
-  try {
-    const res = await mcp.callTool("Google Drive", "read_file_content", { fileId: SHEET_ID });
-    const p = res && res.payload;
-    const text = typeof p === "string" ? p : (p && (p.fileContent || p.content)) || (res.content || []).map((c) => c.text || "").join("\n");
-    const s = readSheet(text);
-    DN.signups = s.signups; DN.bad = s.bad; DN.hasResponses = s.hasResponses; DN.result = null;
-    // Publish the dinners and the form link for everyone.
-    const keep = new Set(s.dinners.map((d) => d.id));
-    for (const d of s.dinners) {
-      const old = DN.dinners.find((x) => x.id === d.id);
-      if (!old || old.title !== d.title || +old.cap !== d.cap || old.order !== d.order) await DN.db.doc("dinners/" + d.id).set(d);
-    }
-    for (const d of DN.dinners) if (!keep.has(d.id)) await DN.db.doc("dinners/" + d.id).delete();
-    if (s.formUrl && (!DN.form || DN.form.url !== s.formUrl)) await DN.db.doc("assign/form").set({ url: s.formUrl });
-    DN.sync = "ok"; DN.syncedAt = Date.now();
-  } catch (e) {
-    DN.sync = "err";
-    const c = e && e.code;
-    DN.syncMsg = c === "server_not_connected" ? "Add Google Drive in claude.ai Settings, Connectors, then refresh."
-      : c === "needs_reauth" ? "Reconnect Google Drive in claude.ai Settings, Connectors, then refresh."
-      : c === "not_in_manifest" || c === "approval_required" || c === "consent_required" ? "The site needs your OK to read the sign-up sheet. Press Refresh and allow Google Drive."
-      : c === "tool_error" ? "Google Drive couldn’t open the sign-up sheet. Check that it still exists."
-      : "Couldn’t reach Google Drive just now. Press Refresh to try again.";
+  if (!DS.list) {
+    DS.list = window.GUESTS.filter((g) => !g.placeholder && !g.maybe).map((g) => ({ guest: g.name, date: "", seats: 6 }));
+    if (!api || DS.err) DS.status = "preview";
   }
-  drawDn();
+  DS.picks = DS.picks.filter((p) => DS.list.some((d) => d.guest === p));
+  drawDinners();
 }
-const dName = (id) => { const d = DN.dinners.find((x) => x.id === id); return d ? d.title : "A dinner that was removed"; };
-const formLink = () => { const u = (DN.form && DN.form.url) || window.COURSE.dinnerForm || ""; return /^https:\/\//.test(u) ? u : ""; };
-function drawDn() {
+function dnSave() { store.set("vcl-dn-picks", DS.picks); store.set("vcl-dn-name", DS.name); store.set("vcl-dn-email", DS.email); store.set("vcl-dn-done", DS.done); }
+function drawDinners() {
   const el = document.getElementById("dn"); if (!el) return;
-  if (DN.loading) return;
-  const link = formLink(), closed = DN.assign && DN.assign.closed, posted = DN.assign && Array.isArray(DN.assign.schedule);
-  let h = DN.msg ? `<p class="quiet">${esc(DN.msg)}</p>` : "";
-  const signBtn = link ? `<a class="btn" href="${esc(link)}" target="_blank" rel="noopener">Sign up for a dinner</a>` : "";
-  if (!DN.db) { el.innerHTML = h + (signBtn ? `<p>${signBtn}</p>` : `<p class="quiet">Sign-ups open soon.</p>`); return; }
-  const ds = DN.dinners;
-  // Students
-  if (posted) {
-    h += `<h2>The dinner schedule</h2>${DN.assign.schedule.map((d) => `<h3>${esc(d.title)}</h3><p>${(d.names || []).map(esc).join(", ") || '<span class="quiet">Nobody yet</span>'}</p>`).join("")}`;
-  } else if (!closed) {
-    h += `<ol class="steps"><li>Click <b>Sign up for a dinner</b>.</li><li>Type your name and rank your top five dinners.</li><li>Come back here to see which dinner you got.</li></ol>
-    <p>${signBtn || '<span class="quiet">Sign-ups open soon.</span>'}</p>`;
-    h += ds.length ? `<h2>The dinners</h2><ul class="list">${ds.map((d) => `<li><b>${esc(d.title)}</b><span class="meta">${esc((d.cap || 6) + " seats")}</span></li>`).join("")}</ul>` : "";
-  } else if (!DN.owner) h += `<p class="quiet">Sign-ups are closed. The schedule will be posted here soon.</p>`;
-
-  // Instructor
-  if (DN.owner) {
-    h += `<div class="inst"><h2>Instructor</h2><p class="quiet">Only you see this.</p>`;
-    if (DN.sync === "busy" && !DN.syncedAt) h += `<p class="quiet">Checking your sign-up sheet…</p>`;
-    else if (DN.sync === "err" || DN.sync === "off") h += `<p>${esc(DN.syncMsg)}</p><p><button type="button" id="dn-sync">Try again</button></p>`;
-    else if (!link) {
-      h += `<h3>Turn on sign-ups (once, about two minutes)</h3><ol class="steps">
-      <li><a class="btn" href="${SHEET_URL}" target="_blank" rel="noopener">Open the sign-up sheet</a></li>
-      <li>In the sheet, open <b>Extensions</b>, then <b>Apps Script</b>.</li>
-      <li>Delete what’s there, then paste the script: <button type="button" class="ghost" id="dn-copy">Copy the script</button></li>
-      <li>Press <b>Run</b> and allow access when Google asks.</li>
-      <li>Come back here and press <button type="button" class="ghost" id="dn-sync">I’ve done it</button></li></ol>
-      <p class="quiet" id="dn-copied"></p>`;
-    } else {
-      h += `<p><b>${DN.signups.length}</b> ${DN.signups.length === 1 ? "student has" : "students have"} signed up. <button type="button" class="ghost" id="dn-sync" ${DN.sync === "busy" ? "disabled" : ""}>${DN.sync === "busy" ? "Checking…" : "Check again"}</button></p>
-      ${DN.bad.length ? `<p class="quiet">Some choices don’t match a dinner in the sheet: ${DN.bad.map(esc).join("; ")}.</p>` : ""}
-      <p><button type="button" id="dn-run" ${DN.signups.length && ds.length ? "" : "disabled"}>Make the schedule</button></p>
-      <div id="dn-res"></div>
-      ${DN.signups.length ? `<details><summary>See everyone’s choices</summary><ul class="list">${DN.signups.map((p) => `<li>${esc(p.name)}<span class="meta">${p.ranks.map((r, i) => i + 1 + ". " + esc(dName(r).replace(/^Dinner with /, ""))).join(" · ") || "No valid choices"}</span></li>`).join("")}</ul></details>` : ""}
-      <p class="quiet">To add, remove or change a dinner, edit the <a href="${SHEET_URL}" target="_blank" rel="noopener">sign-up sheet</a>. The form updates by itself.${posted ? ` <button type="button" class="ghost" id="dn-reopen">${closed ? "Reopen sign-ups" : "Close sign-ups"}</button>` : ""}</p>`;
-    }
-    h += `</div>`;
+  const open = DS.status === "open", preview = DS.status === "preview";
+  if (DS.status === "closed") {
+    el.innerHTML = `<div class="dnnote"><b>Sign-ups are closed.</b> Everyone gets an email with their dinner. If you didn’t sign up in time, email the instructor.</div>`;
+    return;
   }
+  const gp = (name) => { const gi = window.GUESTS.findIndex((g) => g.name === name); return gi >= 0 ? guestPic(window.GUESTS[gi], gi) : guestPic({ name }, 0); };
+  const org = (name) => (window.GUESTS.find((g) => g.name === name) || {}).org || "";
+  let h = "";
+  if (preview) h += `<div class="dnnote">${DS.err ? `Sign-ups happen on the <a href="${esc(C.publicUrl || "#")}">public course site</a>. This is a preview.` : "Sign-ups open soon. You can try it out now; nothing is sent until they open."}</div>`;
+  if (DS.done && open) h += `<div class="dnnote ok"><b>You’re in the draw.</b> We emailed you a copy of your picks. You can change them below until sign-ups close.</div>`;
+  h += `<div class="dncards">${DS.list.map((d) => {
+    const k = DS.picks.indexOf(d.guest), hot = DS.counts[d.guest] || 0;
+    return `<button type="button" class="dncard ${k >= 0 ? "on" : ""}" data-g="${esc(d.guest)}" aria-pressed="${k >= 0}">
+      ${k >= 0 ? `<span class="dnrank">${k + 1}</span>` : ""}${gp(d.guest)}
+      <span class="dnt">Dinner with ${esc(d.guest)}</span><span class="dnm">${esc([org(d.guest), d.date, d.seats + " seats"].filter(Boolean).join(" · "))}</span>
+      ${hot ? `<span class="dnm">${hot} picked this first</span>` : ""}</button>`; }).join("")}</div>`;
+  const n = DS.picks.length;
+  h += `<div class="dnbar ${n ? "show" : ""}"><div class="dnpicks">${n ? `<b>Your picks:</b> ${DS.picks.map((p, i) => `${i + 1}. ${esc(p)}`).join(" · ")}` : ""}${n >= DMAX ? ` <span class="quiet">(that’s the most)</span>` : ""}</div>
+    <form id="dnform" class="dnform" onsubmit="return false">
+      <label class="f">Your name<input id="dnname" autocomplete="name" value="${esc(DS.name)}"></label>
+      <label class="f">School email<input id="dnemail" type="email" autocomplete="email" value="${esc(DS.email)}"></label>
+      <button type="submit" id="dngo" class="mvplay" ${DS.busy ? "disabled" : ""}>${DS.busy ? "Sending…" : DS.done ? "Update my picks" : "Done"}</button></form>
+    <p class="quiet" id="dnmsg">${esc(DS.sent || "")}</p></div>
+  <details class="dnhow"><summary>How seats are assigned</summary><p>After sign-ups close, everyone’s first choices are filled first. If a dinner has more first choices than seats, a random draw decides. Then second choices are filled for anyone still without a seat, and so on. Ranking more dinners makes it more likely you get a seat. You’ll get one dinner, and an email telling you which.</p></details>`;
   el.innerHTML = h;
-  drawResult();
+  el.querySelectorAll(".dncard").forEach((b) => b.addEventListener("click", () => {
+    const g = b.dataset.g, k = DS.picks.indexOf(g);
+    if (k >= 0) DS.picks.splice(k, 1); else if (DS.picks.length < DMAX) DS.picks.push(g);
+    DS.sent = null; dnSave(); drawDinners();
+  }));
+  const nm = document.getElementById("dnname"), em = document.getElementById("dnemail");
+  nm.addEventListener("input", () => { DS.name = nm.value; dnSave(); });
+  em.addEventListener("input", () => { DS.email = em.value; dnSave(); });
+  document.getElementById("dnform").addEventListener("submit", submitDinners);
 }
-function drawResult() {
-  const el = document.getElementById("dn-res"); if (!el || !DN.result) return;
-  const r = DN.result, nm = (id) => (DN.signups.find((p) => p.id === id) || {}).name || "No name given";
-  el.innerHTML = `<p>${r.stats.first} got their first choice, ${r.stats.second} their second, ${r.stats.third} their third${r.stats.lower ? `, ${r.stats.lower} their fourth or fifth` : ""}${r.stats.other ? `, ${r.stats.other} a dinner they didn’t rank` : ""}.${r.waitlist.length ? ` ${r.waitlist.length} could not be seated: add a dinner or seats in the sheet and run it again.` : ""}</p>
-  ${DN.dinners.map((d) => `<h3>${esc(d.title)} <span class="quiet">(${(r.byDinner[d.id] || []).length})</span></h3><p>${(r.byDinner[d.id] || []).map((id) => esc(nm(id))).join(", ") || '<span class="quiet">Nobody</span>'}</p>`).join("")}
-  ${r.waitlist.length ? `<h3>Not seated</h3><p>${r.waitlist.map((id) => esc(nm(id))).join(", ")}</p>` : ""}
-  <p style="display:flex;gap:10px;flex-wrap:wrap"><button type="button" id="dn-pub">Post it for everyone</button><button type="button" class="ghost" id="dn-rerun">Try another arrangement</button></p>`;
-}
-document.addEventListener("click", async (e) => {
-  const t = e.target; if (!DN.db || !t.closest || !t.closest("#dn") || !DN.owner) return;
+async function submitDinners() {
+  const msg = (t) => { DS.sent = t; const m = document.getElementById("dnmsg"); if (m) m.textContent = t; };
+  if (!DS.picks.length) return msg("Tap at least one dinner first.");
+  if (!DS.name.trim()) return msg("Add your name.");
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(DS.email.trim())) return msg("Add your school email, so we can tell you which dinner you got.");
+  if (DS.status !== "open") return msg("Sign-ups aren’t open yet, so nothing was sent. Your picks are saved on this device.");
+  DS.busy = true; drawDinners();
   try {
-    if (t.id === "dn-sync") await syncSheet();
-    if (t.id === "dn-copy") { try { await navigator.clipboard.writeText(window.DINNER_SCRIPT); document.getElementById("dn-copied").textContent = "Copied. Paste it into Apps Script."; } catch (err) { document.getElementById("dn-copied").textContent = "Your browser blocked copying. The script is also in the thread as setup-form.gs."; } }
-    if (t.id === "dn-run" || t.id === "dn-rerun") {
-      DN.seed = t.id === "dn-rerun" ? (DN.seed || 7) + 1 : DN.seed || 7;
-      DN.result = window.ASSIGN.assignDinners(DN.signups.map((p) => ({ id: p.id, ranks: p.ranks })), DN.dinners.map((d) => ({ id: d.id, cap: +d.cap || 6 })), DN.seed);
-      drawResult();
-    }
-    if (t.id === "dn-pub" && DN.result) {
-      t.disabled = true;
-      const nm = (id) => (DN.signups.find((p) => p.id === id) || {}).name || "No name given";
-      const schedule = DN.dinners.map((d) => ({ title: d.title, names: (DN.result.byDinner[d.id] || []).map(nm) }));
-      await DN.db.doc("assign/current").set({ schedule, closed: true, at: new Date().toISOString() });
-      t.textContent = "Posted. Everyone can see the schedule now.";
-    }
-    if (t.id === "dn-reopen" && DN.assign) { t.disabled = true; await DN.db.doc("assign/current").set({ ...DN.assign, closed: !DN.assign.closed }); }
-  } catch (err) {
-    t.disabled = false; DN.msg = "That didn’t save. Try again."; drawDn();
-  }
-});
-
-
+    const r = await fetch(C.dinnerApi, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ name: DS.name.trim(), email: DS.email.trim(), ranks: DS.picks }) });
+    const j = await r.json();
+    DS.busy = false;
+    if (j.ok) { DS.done = true; DS.sent = ""; dnSave(); drawDinners(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    drawDinners(); msg(j.error === "closed" ? "Sign-ups just closed, so this didn’t go through." : "That didn’t go through. Check your name and email and try again.");
+  } catch (e) { DS.busy = false; drawDinners(); msg("Couldn’t reach the sign-up sheet. Try again in a minute."); }
+}
 
 /* ---------- Share these numbers ---------- */
 function shareUrl() {
