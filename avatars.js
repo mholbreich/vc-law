@@ -13,7 +13,7 @@
     "Farah Gomez":    { bg: "#f7e2df", skin: "#c88a5a", hair: "#3a2316", style: "wavy", shirt: "#b23a3a" },
     "Hana Kim":       { bg: "#e7ebef", skin: "#f1d1b0", hair: "#111111", style: "side", shirt: "#4c5d6e", earrings: "#d9d9d9" },
     "Ruth Feldman":   { bg: "#efeaf6", skin: "#f3d6bf", hair: "#d9d6d0", style: "short", shirt: "#9d8ac2", glasses: true, smile: 2 },
-    "Marcus Lee":     { bg: "#e9e9e9", skin: "#ebc49a", hair: "#121212", style: "slick", shirt: "#222222", smile: 3 },
+    "Marcus Lee":     { bg: "#efe6da", skin: "#ebc49a", hair: "#4a4a4a", style: "receding", shirt: "#7a5a3a", glasses: true, smile: 3, tie: "#2f4f6f" },
     "Tom Brandt":     { bg: "#e4eef5", skin: "#f3d1b4", hair: "#c9a25a", style: "short", shirt: "#5b8bb0", beard: "#b48c4c" },
     "Lena Ortiz":     { bg: "#f3e3e7", skin: "#d39b74", hair: "#1d1410", style: "long", shirt: "#7c2c43" },
     "Graham Pierce": { bg: "#e6e6e6", skin: "#e3b48b", hair: "#8c8c8c", style: "receding", shirt: "#3a3f47", tie: "#8a2f2f" }
