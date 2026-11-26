@@ -679,9 +679,11 @@ function guestPic(g, i) {
   if (g.photo) return `<span class="gpicw"><img class="gpic" src="${esc(g.photo)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML=this.parentNode.dataset.fb" ></span>`.replace('class="gpicw"', `class="gpicw" data-fb="${esc(circle)}"`);
   return circle;
 }
+const gdTabs = (on) => `<div class="seg" role="tablist" aria-label="Guests and dinners">${[["guests", "Guests"], ["dinners", "Dinners"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
 function guestsView() {
-  return `<div class="narrow"><h1>Guests</h1>
+  return `<div class="narrow">${gdTabs("guests")}<h1>Guests</h1>
   <p class="sub">The people joining us for The Lived Experience of Venture Capital.</p>
+  <div class="gdcall"><p><b>Every guest stays for dinner.</b> Small dinners of about six students, right after class.</p><a class="btn" href="#dinners">Pick your dinners →</a></div>
   <p class="quiet">Nobody is confirmed yet. Dates will be posted once they are.</p>
   <ul class="list guests">${window.GUESTS.map((g, gi) => `<li class="grow">${guestPic(g, gi)}<div><div class="gname">${ed("G." + gi + ".name", g.name)}${g.maybe ? ` <span class="sugg">maybe</span>` : ""}${g.org ? `<span class="gorg">${ed("G." + gi + ".org", g.org)}</span>` : ""}</div>
     <p>${ed("G." + gi + ".bio", g.bio)}</p>${g.with ? `<p class="quiet">Same session as ${esc(g.with)}.</p>` : ""}${g.li ? `<a class="li" href="${esc(g.li)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}</div></li>`).join("")}</ul></div>`;
@@ -698,7 +700,7 @@ const DS = { list: null, status: "preview", counts: {}, err: "", sent: null, bus
 function stopDinners() {}
 function dinnersView() {
   setTimeout(loadDinners);
-  return `<div class="narrow"><h1>Dinners</h1>
+  return `<div class="narrow">${gdTabs("dinners")}<h1>Dinners</h1>
   <p class="sub">Small dinners of about six students with one of our guests, at ${esc(C.dinnerTime)} after class. Tap the dinners you’d most like to join, in order. That’s it.</p>
   <div id="dn"><p class="quiet">Loading…</p></div></div>`;
 }
@@ -1168,7 +1170,7 @@ function glossaryView() {
 }
 
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { syllabus: "home", people: "case", captable: "tools", movie: "tools", safex: "tools", story: "case", glossary: "library", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { dinners: "guests", syllabus: "home", people: "case", captable: "tools", movie: "tools", safex: "tools", story: "case", glossary: "library", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h), ib = /^inbox-(\d+)$/.exec(h);
