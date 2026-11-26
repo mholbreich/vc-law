@@ -257,6 +257,21 @@ a.tw:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.07)}
 table,.big,.v{font-variant-numeric:tabular-nums}
 ::selection{background:var(--gold);color:var(--on-gold)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* SAFE explainer, timeline, glossary */
+.tl{list-style:none;padding:0;margin:28px 0 0;position:relative}
+.tl:before{content:"";position:absolute;left:6.2em;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{display:grid;grid-template-columns:5.4em minmax(0,1fr);gap:28px;padding:0 0 30px;opacity:0;transform:translateY(14px);transition:opacity .6s ease,transform .6s ease}
+.tl li.seen{opacity:1;transform:none}
+.tlw{text-align:right;font-size:14px;line-height:1.3}.tlw a{font-weight:600}.tlw span{display:block;color:var(--mute)}
+.tlb{position:relative}.tlb:before{content:"";position:absolute;left:-29px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:3px solid var(--bg)}
+.tlb h3{margin:0 0 6px;font-family:"Libre Caslon Text",Georgia,serif;font-size:22px}
+.tlav{display:flex;gap:4px;margin-bottom:6px}.tlav svg{border-radius:50%}
+.tlb p{margin:0 0 6px}.tln{font-size:14px;color:var(--gold-d);font-weight:600}.tlx{font-size:14px}
+abbr.gl{text-decoration:underline dotted var(--gold-d);text-underline-offset:3px;cursor:help;position:relative}
+abbr.gl:hover:after,abbr.gl:focus:after{content:attr(data-d);position:absolute;left:0;top:calc(100% + 6px);z-index:30;width:min(320px,80vw);background:var(--ink);color:var(--bg);font-size:14px;line-height:1.45;font-weight:400;padding:10px 12px;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.18);white-space:normal;text-transform:none;letter-spacing:0}
+.gll dt{font-weight:600;margin-top:16px}.gll dd{margin:2px 0 0;color:var(--ink)}
+@media(max-width:600px){.tl:before{left:4.4em}.tl li{grid-template-columns:3.8em minmax(0,1fr);gap:22px}.tlb:before{left:-23px}}
 </style>
 </head>
 <body>
@@ -266,13 +281,14 @@ table,.big,.v{font-variant-numeric:tabular-nums}
 </div></header>
 <main id="main"></main>
 <footer>Colorado Law · Spring 2027. The company in this course is fictional, and the numbers in the case and tools are examples for class.</footer>
-<script src="data.js?v=1126c"></script>
-<script src="sim.js?v=1126c"></script>
-<script src="assign.js?v=1126c"></script>
-<script src="inbox.js?v=1126c"></script>
-<script src="inbox-more.js?v=1126c"></script>
-<script src="people.js?v=1126c"></script>
-<script src="avatars.js?v=1126c"></script>
-<script src="app.js?v=1126c"></script>
+<script src="data.js?v=1126d"></script>
+<script src="sim.js?v=1126d"></script>
+<script src="assign.js?v=1126d"></script>
+<script src="inbox.js?v=1126d"></script>
+<script src="inbox-more.js?v=1126d"></script>
+<script src="people.js?v=1126d"></script>
+<script src="avatars.js?v=1126d"></script>
+<script src="glossary.js?v=1126d"></script>
+<script src="app.js?v=1126d"></script>
 </body>
 </html>

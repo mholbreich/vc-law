@@ -50,7 +50,7 @@ function schedRow(w, glance) {
     <p><span class="k">Practice.</span> ${ed("W." + i + ".focus", w.focus)}</p>
     <p><span class="k">Lived Experience.</span> ${ed("W." + i + ".guest", w.guest)}${w.proposedGuests ? ` <span class="quiet">(proposed: ${esc(w.proposedGuests)})</span>` : ""}</p>`}</div></li>`;
 }
-const TOOLNAME = { captable: "Cap table", movie: "Cap table movie", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
+const TOOLNAME = { captable: "Cap table", movie: "Cap table movie", safex: "SAFEs", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
 const classDate = (w) => new Date(w.date + ", 2027 23:59");
 function currentWeek() { const now = new Date(); return WEEKS.find((w) => classDate(w) >= now); }
 function scenButtons(w) {
@@ -134,7 +134,7 @@ function library() {
     document.getElementById("lq").addEventListener("input", (e) => { LIB.q = e.target.value.toLowerCase(); drawLib(); });
     drawLib();
   });
-  return `<div class="narrow"><h1>Library</h1>
+  return `<div class="narrow"><h1>Library</h1><p class="quiet" style="margin-top:-6px">New to the jargon? See the <a href="#glossary">glossary</a>.</p>
   <p class="sub">Books, model documents and sources for the course.</p>
   <label class="f" style="margin-bottom:14px">Search<input type="search" id="lq" placeholder="QSBS, NVCA, tender offer"></label>
   <div class="chips" id="chips"></div><div id="lib"></div></div>`;
@@ -147,7 +147,7 @@ function drawLib() {
 }
 
 /* ---------- Case ---------- */
-const caseTabs = (on) => `<div class="seg" role="tablist" aria-label="Case">${[["case", "The story"], ["people", "The people"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
+const caseTabs = (on) => `<div class="seg" role="tablist" aria-label="Case">${[["case", "The story"], ["story", "Timeline"], ["people", "The people"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
 function peopleView() {
   const P = window.PEOPLE || [];
   return `<div class="narrow">${caseTabs("people")}<h1>The people</h1>
@@ -187,7 +187,7 @@ const DEFAULT = {
 };
 let ST = (() => { const d = JSON.parse(JSON.stringify(DEFAULT)), s = store.get("vcl-cap-v2", {}); Object.keys(d).forEach((k) => { if (s[k] !== undefined) d[k] = (typeof d[k] === "object" && !Array.isArray(d[k])) ? Object.assign(d[k], s[k]) : s[k]; }); return d; })();
 const save = () => store.set("vcl-cap-v2", ST);
-const TOOLS = [["captable", "Cap table"], ["movie", "Cap table movie"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
+const TOOLS = [["captable", "Cap table"], ["movie", "Cap table movie"], ["safex", "SAFEs"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
 const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}" class="${k === on ? "on" : ""}">${l}</a>`).join("")}</div>${SHARED ? `<p class="ask" style="margin-top:-12px">You opened a shared link, so these are the sender’s numbers. Press Start over to go back to the class defaults.</p>` : ""}<p class="sharerow"><button type="button" class="ghost" id="share">Copy link to these numbers</button><span class="quiet" id="sharemsg" aria-live="polite"></span></p><p class="quiet" id="sharebox" hidden></p>`;
 
 const GRANT_STAGES = ["Incorporation", "Pre-seed", "Seed", "Series A", "Series B"];
@@ -977,7 +977,7 @@ function inboxView(n) {
 }
 
 /* ---------- Router ---------- */
-const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, movie, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
+const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, movie, safex, story: storyView, glossary: glossaryView, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
 /* ---------- Motion: cap table movie and money flow ---------- */
   const reduce = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
   let MOVIE_T = null, FLOW_RAF = null;
@@ -1141,8 +1141,122 @@ const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, gues
     paint(0);
   }
 
+/* ---------- SAFE conversion explainer ---------- */
+const SX = Object.assign({ s0: 0, rInv: 3e5, rCap: 8e6, mInv: 2e5, mCap: 10e6, mDisc: 0.2, mPost: false, pre: 14e6, inv: 3e6, step: 0 }, store.get("vcl-safex", {}));
+function safeCalc(o) {
+  const S0 = o.s0 || (ST.founders.reduce((a, f) => a + (+f.shares || 0), 0) + (+ST.pool || 0));
+  const rF = o.rCap > 0 ? o.rInv / o.rCap : 0, mF = o.mPost && o.mCap > 0 ? o.mInv / o.mCap : 0;
+  let P = o.pre / S0, C = S0, M = 0, Rs = 0, mCapP = 0, mDiscP = 0, mP = 0;
+  for (let i = 0; i < 200; i++) {
+    if (o.mPost) { C = S0 / Math.max(0.05, 1 - rF - mF); M = mF * C; mCapP = o.mCap / C; mDiscP = P * (1 - o.mDisc); mP = o.mInv / M; }
+    else { mCapP = o.mCap > 0 ? o.mCap / S0 : Infinity; mDiscP = o.mDisc > 0 ? P * (1 - o.mDisc) : Infinity; mP = Math.min(mCapP, mDiscP, P); M = o.mInv / mP; C = (S0 + M) / Math.max(0.05, 1 - rF); }
+    Rs = rF * C;
+    const nP = o.pre / (S0 + M + Rs);
+    if (Math.abs(nP - P) < 1e-12) { P = nP; break; } P = nP;
+  }
+  const N = o.inv / P, T = S0 + M + Rs + N;
+  return { S0, P, C, M, Rs, N, T, rP: o.rInv / Rs, mP, mCapP, mDiscP, rF, f: S0 / T };
+}
+function safex() {
+  const pxs = (v) => "$" + v.toFixed(v < 1 ? 4 : 3);
+  const sh = (v) => Math.round(v).toLocaleString();
+  setTimeout(() => {
+    const root = document.getElementById("sx"); if (!root) return;
+    const redraw = () => { store.set("vcl-safex", SX); paint(); };
+    root.addEventListener("input", (e) => { const k = e.target.dataset.x; if (!k) return; const u = e.target.dataset.u; let v = parseFloat(e.target.value); if (isNaN(v)) return; SX[k] = u === "M" ? v * 1e6 : u === "%" ? v / 100 : v; redraw(); });
+    root.addEventListener("change", (e) => { if (e.target.id === "sxform") { SX.mPost = e.target.value === "post"; redraw(); } });
+    root.addEventListener("click", (e) => { const b = e.target.closest("[data-st]"); if (b) { SX.step = +b.dataset.st; redraw(); } });
+    paint();
+  });
+  const fld = (k, u, l) => `<label class="f">${l}${u === "M" ? " ($M)" : u === "%" ? " (%)" : ""}<input type="number" step="any" data-x="${k}" data-u="${u}" value="${u === "M" ? SX[k] / 1e6 : u === "%" ? SX[k] * 100 : SX[k]}"></label>`;
+  function paint() {
+    const el = document.getElementById("sxout"); if (!el) return;
+    const r = safeCalc(SX), alt = safeCalc({ ...SX, mPost: !SX.mPost });
+    const steps = [
+      ["Before the Seed", `The company has <b>${sh(r.S0)}</b> shares: the founders’ stock plus the option pool. Ruth and Marcus have paid in ${money(SX.rInv + SX.mInv)}, but they don’t own any shares yet. A SAFE is a promise of shares later.`],
+      ["The Seed sets a price", `The Seed lead invests ${money(SX.inv)} at a ${money(SX.pre)} pre-money valuation. Divide that by the shares counted before the new money, including the shares the SAFEs are about to get, and the Seed price is <b>${pxs(r.P)}</b> a share.`],
+      ["Ruth’s post-money SAFE", `Ruth’s ${money(SX.rInv)} at a ${money(SX.rCap)} post-money cap buys a fixed slice: ${money(SX.rInv)} ÷ ${money(SX.rCap)} = <b>${pct(r.rF, 2)}</b> of the company as it stands just before the Seed, counting every SAFE. That’s <b>${sh(r.Rs)}</b> shares at ${pxs(r.rP)} each. Nothing Marcus signed can shrink that slice.`],
+      [SX.mPost ? "Marcus’s post-money SAFE" : "Marcus’s pre-money SAFE", SX.mPost ? `On the same form as Ruth, Marcus also buys a fixed slice: ${money(SX.mInv)} ÷ ${money(SX.mCap)} = <b>${pct(SX.mInv / SX.mCap, 2)}</b>, or <b>${sh(r.M)}</b> shares.` : `Marcus’s form works differently. His cap price is ${money(SX.mCap)} divided by the shares <i>before</i> any SAFE converts: <b>${pxs(r.mCapP)}</b>. His discount price is the Seed price less ${pct(SX.mDisc, 0)}: <b>${pxs(r.mDiscP)}</b>. He gets whichever is lower, so <b>${pxs(r.mP)}</b>, and <b>${sh(r.M)}</b> shares.`],
+      ["Who paid for it?", `After the Seed the founders and pool hold <b>${pct(r.f)}</b>. Ruth’s form guarantees her slice, so the founders absorb the dilution from her SAFE. If Marcus had signed the ${SX.mPost ? "pre-money" : "post-money"} form instead, the founders would hold <b>${pct(alt.f)}</b>. ${Math.abs(alt.f - r.f) < 0.005 ? "Here the gap is small. " : ""}The bigger difference is certainty: Ruth knew her percentage the day she signed, while Marcus’s depends on the Seed price and on how the share count is measured, and the two forms measure it differently. That’s why mixing forms, as Bernard did in the class 3 inbox, makes work for the lawyers.`]
+    ];
+    const seg = (n, v, c) => v > 0 ? `<div class="mvseg" style="width:${v / r.T * 100}%;background:${c}" title="${esc(n)}"><span>${v / r.T > 0.07 ? esc(n) + " " + pct(v / r.T, 0) : ""}</span></div>` : "";
+    const showR = SX.step >= 2, showM = SX.step >= 3, showN = SX.step >= 1;
+    el.innerHTML = `<div class="mvsteps" style="margin-bottom:14px">${steps.map((s, i) => `<button type="button" data-st="${i}" class="mvstep ${i === SX.step ? "on" : i < SX.step ? "done" : ""}">${i + 1}. ${esc(s[0])}</button>`).join("")}</div>
+    <div class="mvstage"><div class="mvname">${esc(steps[SX.step][0])}</div>
+    <div class="mvbar">${seg("Founders and pool", r.S0, "#cfb87c")}${showR ? seg("Ruth", r.Rs, "#c97b5a") : ""}${showM ? seg("Marcus", r.M, "#94526b") : ""}${showN ? seg("Seed lead", r.N, "#3f6e8c") : ""}</div>
+    <p class="mvsay in">${steps[SX.step][1]}</p>
+    <p>${SX.step > 0 ? `<button type="button" class="ghost" data-st="${SX.step - 1}">← Back</button> ` : ""}${SX.step < 4 ? `<button type="button" class="mvplay" data-st="${SX.step + 1}">Next →</button>` : ""}</p></div>`;
+  }
+  return `<h1>Tools</h1>${tabs("safex")}
+  <p class="sub">How Ruth’s and Marcus’s SAFEs turn into shares at the Seed, one step at a time. Ruth signed the post-money form; Marcus signed a pre-money form with a discount. Change the numbers to see what moves.</p>
+  <div id="sx"><form class="ctl" onsubmit="return false" style="margin-bottom:18px"><fieldset><legend>Ruth</legend>${fld("rInv", "M", "Invested")}${fld("rCap", "M", "Post-money cap")}</fieldset>
+  <fieldset><legend>Marcus</legend>${fld("mInv", "M", "Invested")}${fld("mCap", "M", "Cap")}${fld("mDisc", "%", "Discount")}<label class="f">Form<select id="sxform"><option value="pre" ${SX.mPost ? "" : "selected"}>Pre-money SAFE</option><option value="post" ${SX.mPost ? "selected" : ""}>Post-money SAFE</option></select></label></fieldset>
+  <fieldset><legend>Seed round</legend>${fld("pre", "M", "Pre-money")}${fld("inv", "M", "Invested")}</fieldset></form>
+  <div id="sxout"></div></div>
+  <p class="quiet">Simplified: the pool isn’t topped up in the Seed here, so the numbers differ a little from the Dilution tab. The point is the order of the steps and who bears the dilution.</p>`;
+}
+
+/* ---------- Story timeline ---------- */
+function storyView() {
+  let cap = null; try { cap = computeCap(ST); } catch (e) {}
+  const fo = (st) => { if (!st) return ""; const o = ownG(st.s); return pct(o.rows.filter((r) => ST.founders.some((f) => f.name === r.name)).reduce((a, r) => a + r.pct, 0), 0); };
+  const stg = (n) => cap && cap.stages.find((s) => s.name === n);
+  const beats = [
+    { w: 1, t: "The idea", who: ["Abigail Reyes", "Bernard Walsh", "Charlie Osei"], say: "Abigail builds Minion, an AI agent that books, shops and schedules, in her CU lab. Bernard wants to raise money yesterday. Charlie wants a plan.", n: "Is it venture-backable?" },
+    { w: 2, t: "Formation", who: ["Diane Okafor", "Dana Park"], say: "Hart & Lowell incorporates the company in Delaware. Bernard proposes milestone vesting, and Charlie signs an online template that will come back to haunt everyone. Dana wants “some equity” for her weekend code.", n: cap ? `Founders own ${fo(stg("Incorporation"))}` : "" },
+    { w: 3, t: "The SAFEs", who: ["Ruth Feldman", "Marcus Lee"], say: "Ruth signs a clean post-money SAFE. Marcus signs his own pre-money form, then asks for an advisor deal and a full ratchet, and Bernard emails him “you got it.”", n: cap ? `Founders own ${fo(stg("Pre-seed"))} if the SAFEs convert` : "" },
+    { w: 4, t: "Three term sheets", who: ["Lena Ortiz", "Graham Pierce"], say: "Three Series A offers. The highest price hides a 1.5x participating preference and a full ratchet. Graham sends the “customary” drafts.", n: cap ? `Seed price $${stg("Seed").pref.toFixed(2)}` : "" },
+    { w: 6, t: "The fight", who: ["Abigail Reyes", "Bernard Walsh"], say: "Abigail and Bernard split over the lead investor and the product. Bernard asks you to quietly take Abigail off the board. Lena says Kestrel won’t lead into a founder fight.", n: "Who does the firm represent?" },
+    { w: 7, t: "The fund’s clock", who: ["Tom Brandt"], say: "Juniper’s fund is in year eight. Tom moves his stake into a continuation fund and wants the board decks for the buyer.", n: "" },
+    { w: 8, t: "Charlie leaves", who: ["Charlie Osei", "Eli Brooks", "Dana Park"], say: "Charlie wants to sell at $7 and go. The old template says he’s fully vested. Eli wants in on the sale and wants to rush grants before the 409A catches up. Dana has six questions.", n: cap ? `Series A price $${stg("Series A").pref.toFixed(2)}` : "" },
+    { w: 9, t: "Tax season", who: ["Eli Brooks"], say: "Eli wants a company loan to exercise early. Bernard wants to know if his shares qualify for QSBS under the 2025 rules.", n: "" },
+    { w: 10, t: "Running low", who: ["Lena Ortiz", "Bernard Walsh"], say: "Inference costs bite. The company trips its cash covenant, the lender wants more warrants, and the insiders offer a bridge with a 2x preference.", n: "" },
+    { w: 11, t: "The exit", who: ["Bernard Walsh", "Abigail Reyes"], say: "Six weeks of cash. A $60M sale or an acqui-hire. Bernard is offered a $3M retention bonus. Abigail asks if the investors just take everything.", n: cap ? `Series B post-money ${money(cap.last.post)}` : "" },
+    { w: 12, t: "Liquidity", who: ["Eli Brooks", "Marcus Lee"], say: "A tender offer or a negotiated secondary? Eli finds a marketplace paying $8. Marcus demands registration rights for the IPO.", n: cap ? `Founders own ${fo(stg("Series B"))}` : "" },
+    { w: 13, t: "The ideas", who: ["Bernard Walsh"], say: "Bernard reads Zero to One on a plane and wants to ban down rounds in the charter.", n: "" },
+    { w: 14, t: "The machines", who: ["Diane Okafor"], say: "The firm wants AI to review 200 contracts. Bernard had AI draft the board consent. What does a lawyer owe the client now?", n: "" }
+  ];
+  setTimeout(() => {
+    const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("seen"); io.unobserve(e.target); } }), { threshold: 0.2 }) : null;
+    document.querySelectorAll(".tl li").forEach((li) => (io ? io.observe(li) : li.classList.add("seen")));
+  });
+  return `<div class="narrow">${caseTabs("story")}<h1>From the lab to the exit</h1>
+  <p class="sub">The whole semester as one story. Each step links to that week’s class and practice inbox.</p>
+  <ol class="tl">${beats.map((b) => { const w = WEEKS.find((x) => x.n === b.w); return `<li><div class="tlw"><a href="#week-${b.w}">Class ${b.w}</a><span>${w ? esc(fmtShort(w)) : ""}</span></div><div class="tlb"><h3>${esc(b.t)}</h3><div class="tlav">${b.who.map((n) => window.avatarSvg ? `<span title="${esc(n)}">${window.avatarSvg(n, 40)}</span>` : "").join("")}</div><p>${esc(b.say)}</p>${b.n ? `<p class="tln">${esc(b.n)}</p>` : ""}${(window.INBOX || {})[b.w] ? `<a class="tlx" href="#inbox-${b.w}">Open the practice inbox →</a>` : ""}</div></li>`; }).join("")}</ol></div>`;
+}
+function fmtShort(w) { try { const d = classDate(w); return d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""; } catch (e) { return ""; } }
+
+/* ---------- Glossary ---------- */
+const GLOSS = window.GLOSSARY || {};
+const GKEYS = Object.keys(GLOSS).sort((a, b) => b.length - a.length);
+const GRE = GKEYS.length ? new RegExp("\\b(" + GKEYS.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?![\\w-])", "i") : null;
+const GSKIP = new Set(["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT", "OPTION", "LABEL", "SCRIPT", "STYLE", "SVG", "H1", "H2", "CODE", "ABBR", "SUMMARY", "TITLE", "LEGEND", "TH"]);
+function glossify() {
+  if (!GRE || (typeof EDIT !== "undefined" && EDIT.on)) return;
+  const root = document.getElementById("main"); if (!root || root.querySelector(".glpage")) return;
+  const used = new Set(), lk = (t) => GKEYS.find((k) => k.toLowerCase() === t.toLowerCase());
+  const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (n) => { for (let p = n.parentNode; p && p !== root; p = p.parentNode) { if (GSKIP.has(p.nodeName.toUpperCase()) || (p.classList && (p.classList.contains("nogl") || p.classList.contains("mvbar") || p.isContentEditable))) return NodeFilter.FILTER_REJECT; } return NodeFilter.FILTER_ACCEPT; } });
+  const nodes = []; while (walk.nextNode()) nodes.push(walk.currentNode);
+  nodes.forEach((node) => {
+    let txt = node.nodeValue, m, frag = null, last = 0, rest = txt, off = 0;
+    const re = new RegExp(GRE.source, "gi");
+    while ((m = re.exec(txt))) {
+      const key = lk(m[1]); if (!key || used.has(key)) continue;
+      used.add(key); frag = frag || document.createDocumentFragment();
+      frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
+      const ab = document.createElement("abbr"); ab.className = "gl"; ab.tabIndex = 0; ab.textContent = m[1]; ab.dataset.d = GLOSS[key]; ab.setAttribute("aria-label", m[1] + ": " + GLOSS[key]);
+      frag.appendChild(ab); last = m.index + m[1].length;
+    }
+    if (frag) { frag.appendChild(document.createTextNode(txt.slice(last))); node.parentNode.replaceChild(frag, node); }
+  });
+}
+function glossaryView() {
+  return `<div class="narrow glpage"><h1>Glossary</h1><p class="sub">Plain-English definitions. Across the site, a dotted underline means you can hover or tap a term to see its definition.</p>
+  <dl class="gll">${Object.keys(GLOSS).sort((a, b) => a.localeCompare(b)).map((k) => `<dt>${esc(k)}</dt><dd>${esc(GLOSS[k])}</dd>`).join("")}</dl></div>`;
+}
+
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { syllabus: "home", people: "case", captable: "tools", movie: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { syllabus: "home", people: "case", captable: "tools", movie: "tools", safex: "tools", story: "case", glossary: "library", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h), ib = /^inbox-(\d+)$/.exec(h);
@@ -1152,6 +1266,7 @@ function route() {
   const sec = SECTION[key] || key;
   document.querySelectorAll("#nav a").forEach((a) => a.classList.toggle("on", a.dataset.s === sec));
   if (EDIT.on) applyEditMode();
+  setTimeout(glossify, 60);
 }
 window.addEventListener("hashchange", () => { route(); window.scrollTo(0, 0); });
 route();
