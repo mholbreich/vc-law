@@ -646,9 +646,11 @@ function drawFund() {
 /* ---------- Guests ---------- */
 // A guest's photo if we have one (photo: a file in photos/ or a URL the guest sent), otherwise their initials.
 function guestPic(g, i) {
-  if (g.photo) return `<img class="gpic" src="${esc(g.photo)}" alt="" loading="lazy">`;
   const ini = g.name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  return `<span class="gpic" style="background:${["#86692a", "#3f6e8c", "#a6432b", "#6b7a45", "#6c3f6e", "#2f5d5d", "#94526b", "#5a6470"][i % 8]}" aria-hidden="true">${esc(ini)}</span>`;
+  const circle = `<span class="gpic" style="background:${["#86692a", "#3f6e8c", "#a6432b", "#6b7a45", "#6c3f6e", "#2f5d5d", "#94526b", "#5a6470"][i % 8]}" aria-hidden="true">${esc(ini)}</span>`;
+  // If the photo can't load (moved, or blocked here), fall back to the initials.
+  if (g.photo) return `<span class="gpicw"><img class="gpic" src="${esc(g.photo)}" alt="" loading="lazy" onerror="this.parentNode.innerHTML=this.parentNode.dataset.fb" ></span>`.replace('class="gpicw"', `class="gpicw" data-fb="${esc(circle)}"`);
+  return circle;
 }
 function guestsView() {
   return `<div class="narrow"><h1>Guests</h1>
