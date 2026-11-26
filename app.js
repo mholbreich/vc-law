@@ -152,7 +152,7 @@ function peopleView() {
   const P = window.PEOPLE || [];
   return `<div class="narrow">${caseTabs("people")}<h1>The people</h1>
   <p class="sub">Everyone you will hear from in the case and the practice inboxes. You are the first-year associate at Hart & Lowell.</p>
-  ${P.map((g) => `<h2>${esc(g.group)}</h2><p class="quiet">${esc(g.note)}</p><div class="cast">${g.people.map((p) => `<details class="person"><summary><b>${esc(p.name)}</b><span>${esc(p.role)}</span><span class="quiet">${esc(p.line)}</span></summary>
+  ${P.map((g) => `<h2>${esc(g.group)}</h2><p class="quiet">${esc(g.note)}</p><div class="cast">${g.people.map((p) => `<details class="person"><summary>${window.avatarSvg ? window.avatarSvg(p.name, 64) : ""}<div class="pinfo"><b>${esc(p.name)}</b><span>${esc(p.role)}</span><span class="quiet">${esc(p.line)}</span></div></summary>
     <dl><dt>What they’re like</dt><dd>${esc(p.like)}</dd><dt>What they want</dt><dd>${esc(p.wants)}</dd>${p.habits ? `<dt>Habits that make work for you</dt><dd>${esc(p.habits)}</dd>` : ""}${p.irks ? `<dt>What irritates them</dt><dd>${esc(p.irks)}</dd>` : ""}${p.says ? `<dt>Things they say</dt><dd>${esc(p.says)}</dd>` : ""}<dt>How they write</dt><dd>${esc(p.writes)}</dd><dt>Where they show up</dt><dd>${esc(p.classes)}</dd></dl></details>`).join("")}</div>`).join("")}</div>`;
 }
 function caseView() {
@@ -924,7 +924,7 @@ function inboxView(n) {
     const el = document.getElementById("ibx"); if (!el) { clearInterval(INBOX_TIMER); return; }
     const got = arrived(), na = nextAt();
     if (S.open && !got.some((m) => m.id === S.open)) S.open = "";
-    const list = got.slice().reverse().map((m) => `<button type="button" class="ibm ${m.id === S.open ? "on" : ""} ${S.sent[m.id] ? "done" : ""}" data-open="${m.id}"><b>${esc(m.from)}</b><span>${esc(m.subject)}</span><small>${S.sent[m.id] ? "Replied" : "New"}</small></button>`).join("");
+    const list = got.slice().reverse().map((m) => `<button type="button" class="ibm ${m.id === S.open ? "on" : ""} ${S.sent[m.id] ? "done" : ""}" data-open="${m.id}">${window.avatarSvg ? window.avatarSvg(m.from, 36) : ""}<span class="ibmt"><b>${esc(m.from)}</b><span>${esc(m.subject)}</span><small>${S.sent[m.id] ? "Replied" : "New"}</small></span></button>`).join("");
     let status = "";
     if (!S.start && !S.all) status = `<p>Press Start when your instructor says go. Emails will arrive over the next ${Math.max(...box.mail.map((m) => m.at))} minutes or so.</p><p><button type="button" id="ibstart">Start</button></p>`;
     else if (na !== null) { const sec = Math.max(0, Math.round((na - elapsed()) * 60)); status = `<p class="quiet">Next email in ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}</p>`; }
@@ -932,10 +932,11 @@ function inboxView(n) {
     let pane = `<p class="quiet">${got.length ? "Pick an email on the left." : "No email yet."}</p>`;
     if (m) {
       const r = S.sent[m.id];
-      pane = `<div class="ibhead"><b>${esc(m.subject)}</b><span>From ${esc(m.from)}, ${esc(m.role)}</span></div><div class="ibbody">${para(m.body)}</div>`;
+      pane = `<div class="ibfrom">${window.avatarSvg ? window.avatarSvg(m.from, 44) : ""}<div class="ibhead"><b>${esc(m.subject)}</b><span>From ${esc(m.from)}, ${esc(m.role)}</span></div></div><div class="ibbody">${para(m.body)}</div>`;
       if (!r) pane += `<label class="f w">Your reply<textarea id="ibtext" rows="9" placeholder="Write your reply as you would send it.">${esc(S.draft && S.draft[m.id] || "")}</textarea></label><p><button type="button" id="ibsend">Send</button></p>`;
       else pane += `<div class="ibsent"><span class="quiet">You replied</span>${para(r.text)}</div>
-        <div class="ibbody ibfollow"><div class="ibhead"><b>Re: ${esc(m.subject)}</b><span>From ${esc(m.follow.from)}</span></div>${para(m.follow.body)}</div>
+        <div class="ibbody ibfollow"><div class="ibfrom">${window.avatarSvg ? window.avatarSvg(m.follow.from, 36) : ""}<div class="ibhead"><b>Re: ${esc(m.subject)}</b><span>From ${esc(m.follow.from)}</span></div></div>${para(m.follow.body)}</div>
+        <div class="ibcheck"><b>Check your reply</b><ul>${(window.CHECK || []).concat(box.skill ? [box.skill] : []).map((q) => `<li>${esc(q)}</li>`).join("")}</ul></div>
         <details><summary>What a strong reply does</summary><ul>${m.good.map((g) => `<li>${esc(g)}</li>`).join("")}</ul></details>
         <details><summary>One way a senior lawyer might answer</summary><div class="ibbody">${para(m.model)}</div></details>
         <p><button type="button" class="ghost" id="ibredo">Try this one again</button></p>`;
@@ -963,7 +964,8 @@ function inboxView(n) {
   return `<div class="wide"><p class="quiet"><a href="#week-${n}">Class ${n}: ${esc(w.title)}</a> · Practice inbox</p>
   <h1>Practice inbox</h1><p class="sub">${esc(box.intro)}</p>
   <p class="quiet">Practice only. Your replies stay on this device and aren’t sent to anyone. <a href="#people">Who’s who</a> · <button type="button" class="linkish" id="iball">Show all emails now</button> · <button type="button" class="linkish" id="ibreset">Start over</button></p>
-  <div id="ibx"></div></div>`;
+  <div id="ibx"></div>
+  ${box.debrief ? `<details class="ibdeb"><summary>Debrief questions (for class discussion)</summary><ol>${box.debrief.map((q) => `<li>${esc(q)}</li>`).join("")}</ol><p class="quiet">Suggested timing: 5 minutes to set up, 20 in the inbox (in pairs), 10 to debrief with two volunteer replies on screen.</p></details>` : ""}</div>`;
 }
 
 /* ---------- Router ---------- */

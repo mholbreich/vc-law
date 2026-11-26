@@ -210,7 +210,10 @@ details.amt{margin-top:18px}
 .linkish{background:none;border:0;padding:0;min-height:0;color:var(--ink);text-decoration:underline;font-weight:400;font-size:inherit}
 @media(max-width:780px){.inbox{grid-template-columns:minmax(0,1fr)}.iblist{border-right:0;border-bottom:1px solid var(--line)}}
 .seg a{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:999px;padding:4px 14px;min-height:40px;font-size:15px;color:var(--ink);text-decoration:none;margin:0 6px 6px 0}.seg a.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.cast{display:grid;gap:10px}.person{border:1px solid var(--line);border-radius:8px;padding:12px 16px}.person summary{display:grid;gap:2px;cursor:pointer;list-style:none;color:var(--ink);font-weight:400}.person summary .quiet{font-size:15px}.person summary::-webkit-details-marker{display:none}.person summary b{font-size:18px}.person[open]{background:var(--soft)}.person dl{margin:10px 0 0}.person dt{font-weight:600;margin-top:8px}.person dd{margin:0}
+.cast{display:grid;gap:10px}.person{border:1px solid var(--line);border-radius:8px;padding:12px 16px}.person summary{display:grid;grid-template-columns:64px minmax(0,1fr);gap:14px;align-items:center;cursor:pointer;list-style:none;color:var(--ink);font-weight:400}.person summary .quiet{font-size:15px}.person summary::-webkit-details-marker{display:none}.person summary b{font-size:18px}.person[open]{background:var(--soft)}.person dl{margin:10px 0 0}.person dt{font-weight:600;margin-top:8px}.person dd{margin:0}
+.ibcheck{border:1px solid var(--line);border-radius:8px;padding:10px 14px;margin:12px 0}.ibcheck ul{margin:6px 0 0;padding-left:20px}.ibdeb{margin-top:18px}
+.pinfo{display:grid;gap:2px}.pinfo b{font-size:18px}.av{flex:none;border-radius:50%}
+.ibm{grid-template-columns:36px minmax(0,1fr);align-items:start;column-gap:10px}.ibmt{display:grid;gap:2px}.ibfrom{display:flex;gap:12px;align-items:center;margin-bottom:10px}.ibfrom .ibhead{margin:0}
 </style>
 </head>
 <body>
@@ -225,6 +228,7 @@ details.amt{margin-top:18px}
 <script src="assign.js"></script>
 <script src="inbox.js"></script>
 <script src="people.js"></script>
+<script src="avatars.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

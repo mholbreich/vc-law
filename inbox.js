@@ -2,8 +2,11 @@
    at = minutes after the student presses Start. follow = the sender's answer once the student replies.
    good = what a strong reply does. model = one way a senior lawyer might answer. */
 window.FIRM = { name: "Hart & Lowell LLP", partner: "Diane Okafor" };
+window.CHECK = ["Did you lead with the answer?", "Would the client understand it without a lawyer in the room?", "Did you say what happens next, and who does it?"];
 window.INBOX = {
   2: {
+    skill: "Simplify to market. Did you steer to standard terms and explain why in words the client accepts?",
+    debrief: ["Who does the firm represent when Bernard, Charlie and Dana all write to you?", "What’s wrong with milestone vesting, in one sentence a founder would accept?", "Charlie already signed an online template. What do you do with it?", "What did Dana need from you, and what does the company need from Dana?"],
     intro: "You are a second-year associate at Hart & Lowell. Mostly Human AI is a new client. Read each email as it arrives and reply as you would in practice.",
     mail: [
       { id: "p", at: 0, from: "Diane Okafor", role: "Partner, Hart & Lowell", subject: "New client: Mostly Human AI",
@@ -24,6 +27,8 @@ window.INBOX = {
     ]
   },
   3: {
+    skill: "Deal with what’s already signed. Did you fix the problem in front of you before moving on?",
+    debrief: ["Explain the difference between a pre-money and a post-money SAFE to Bernard in two sentences.", "Marcus wrote to you directly. What could you say, and what couldn’t you?", "Which side letter requests are worth giving, and what does each cost the company?", "How do you get Bernard to send you documents before he signs them?"],
     intro: "You are the associate on Mostly Human AI's seed SAFEs. Two angels have signed term sheets and want side letters. Reply to each email as it arrives.",
     mail: [
       { id: "p", at: 0, from: "Diane Okafor", role: "Partner, Hart & Lowell", subject: "Seed SAFEs: side letter asks",
@@ -36,14 +41,16 @@ window.INBOX = {
         good: ["Congratulate him, then deal with what's already signed", "Explain the problem in plain words: a pre-money and a post-money SAFE convert differently, so the cap table will be hard to predict and Marcus may get more than Bernard thinks", "Options: ask Marcus to switch to the YC post-money form, or model both and accept it knowingly", "The observer seat was promised by phone: decide whether to honor it, and if so, put it in a side letter with conditions", "The new $12M SAFE: fine in principle, but use the YC form and show him the dilution first", "Ask him to send every investor document to you before he signs it"],
         model: "Bernard,\n\nCongratulations. Two quick things before we send wire instructions.\n\n1. The two SAFEs work differently. Ruth's is a post-money SAFE, so we know exactly what she gets. Marcus's is a pre-money SAFE, so his share depends on everything raised after it, and it can come out higher than you expect. I'd ask Marcus to switch to the YC post-money form. Most angels will. If he won't, I'll show you the numbers so you can decide.\n\n2. The observer seat. If you've promised it, let's put it in a short side letter: it ends at the seed round, he keeps things confidential, and the board can excuse him from sensitive topics.\n\nThe $12M SAFE is fine, on the YC form. It's a better price for you, but each SAFE comes out of the founders' share, so I'll send the dilution first.\n\nGoing forward, please send me anything from an investor before you sign it. It's much easier to fix before.\n\nThanks,\n[You]",
         follow: { from: "Bernard Walsh", body: "Totally fair. Marcus says he'll switch forms if he gets an MFN AND pro rata AND the observer seat. Is that ok?? He's really nice.\n\nB." } },
-      { id: "a", at: 12, from: "Marcus Lee", role: "Angel 2", subject: "Off the record",
-        body: "Hi,\n\nYour client is being difficult about the observer seat. Between us, what's the company's runway? I'm deciding today whether to wire.\n\nMarcus",
-        good: ["Don't share confidential company information", "Make clear who you represent", "Route the business question to Bernard", "Stay courteous. He's a future investor"],
-        model: "Hi Marcus,\n\nThanks for the note. I represent Mostly Human AI, so I can't share company information outside the process. I'd be glad to set up a call with Bernard today so you have what you need to decide.\n\nBest,\n[You]",
-        follow: { from: "Marcus Lee", body: "Fine. Tell Bernard I'll take quarterly calls instead of the seat if he gives me pro rata too.\n\nM." } }
+      { id: "a", at: 12, from: "Marcus Lee", role: "Angel 2", subject: "Quick one (off the record)",
+        body: "Hi,\n\nQuick one. Bernard already agreed to this on the phone, so I just need you to paper it.\n\nBesides the SAFE, I'll be an advisor to the company: 2% of the fully diluted stock, vesting over one year, plus a $10,000 monthly retainer for strategic help. I add a lot more than money. Everyone does this.\n\nAlso, between us, what's the company's runway? I'm deciding today whether to wire.\n\nMarcus",
+        good: ["Don't paper anything until you confirm with Bernard. \"Bernard already agreed\" is not your instruction", "Say what's market: advisors usually get 0.1% to 0.5%, vesting over two years, and rarely cash at this stage. 2% plus $120,000 a year is about ten times that", "Don't share runway or other confidential information. Route business questions to Bernard", "Be courteous. He's still an investor, and the reply may be forwarded", "Tell Bernard and Diane right away, with a short recommendation"],
+        model: "Hi Marcus,\n\nThanks for the note. I represent Mostly Human AI, so I'll confirm the advisor terms with Bernard before we draft anything, and I can't share company information like runway outside that process. I'll set up a call with Bernard today so you have what you need.\n\nBest,\n[You]\n\n(Separately, to Bernard and Diane: Marcus is asking for 2% plus $10K a month as an advisor. Market for an advisor at this stage is 0.1% to 0.5% over two years and no cash. I'd recommend we say no to the retainer and offer a standard advisor grant if you want him as one.)",
+        follow: { from: "Marcus Lee", body: "Fine. Tell Bernard I'll take 1% and no retainer, but I want the observer seat AND pro rata. Final offer.\n\nM." } }
     ]
   },
   8: {
+    skill: "Know who you represent. Did you keep that straight with each person who wrote?",
+    debrief: ["Charlie asks you to keep a secret. What do you owe him, and what do you owe the company?", "Rank the five issues. What has to happen before Thursday’s board call?", "Farah thinks her options are worth $7. What’s the right number, and why is it different?", "Three more employees want to sell. What should the board consider?"],
     intro: "It's the week before the Series B closes. You are company counsel. Charlie has told the CEO he's leaving. Reply to each email as it arrives.",
     mail: [
       { id: "p", at: 0, from: "Diane Okafor", role: "Partner, Hart & Lowell", subject: "Charlie is leaving",
