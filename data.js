@@ -268,5 +268,6 @@ window.DINNER_INFO = {
   "Jamie Anderson": { org: "Midi Health", blurb: "Chief legal officer of Midi Health, and a healthcare lawyer for more than 20 years." },
   "Elliott Portnoy": { org: "Dentons", blurb: "Founding global CEO of Dentons, which he built into the world’s largest law firm by headcount." },
   "Michelle Longmire": { org: "Medable", blurb: "CEO and co-founder of Medable, which runs clinical trials patients can join from home. She has raised about $500 million in venture capital." },
+  // Not confirmed yet; add to dinners.json too if he says yes.
   "Jerry Colonna": { org: "Reboot", blurb: "Executive coach to founders and VCs, author of Reboot, and co-founder of the venture firm Flatiron Partners." }
 };

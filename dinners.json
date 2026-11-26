@@ -1,0 +1,45 @@
+{
+ "note": "The dinner list. The Google Sheet copies this into its Dinners tab automatically.",
+ "dinners": [
+  {
+   "guest": "Ron Zori",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Taylor Sargent and Mason Angel",
+   "date": "",
+   "seats": 8
+  },
+  {
+   "guest": "David Cohen",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Erick Rabin",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Megan Baier",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Jamie Anderson",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Elliott Portnoy",
+   "date": "",
+   "seats": 6
+  },
+  {
+   "guest": "Michelle Longmire",
+   "date": "",
+   "seats": 6
+  }
+ ]
+}

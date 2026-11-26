@@ -20,6 +20,26 @@
  *  Assignments  filled by "Run the matching": Name | Email | Dinner | Choice
  */
 var MAX_PICKS = 5;
+// The dinner list lives on the course site. The Dinners tab is refreshed from it,
+// so add or remove guests by updating the site (ask Claude), not the tab.
+var LIST_URL = 'https://mholbreich.github.io/vc-law/dinners.json';
+
+function syncDinners_(force) {
+  var cache = CacheService.getScriptCache();
+  if (!force && cache.get('synced')) return;
+  try {
+    var r = UrlFetchApp.fetch(LIST_URL + '?t=' + Date.now(), { muteHttpExceptions: true });
+    if (r.getResponseCode() !== 200) return;
+    var list = (JSON.parse(r.getContentText()).dinners || []).filter(function (x) { return x && x.guest; });
+    if (!list.length) return;
+    var d = SpreadsheetApp.getActive().getSheetByName('Dinners');
+    var last = d.getLastRow();
+    if (last > 1) d.getRange(2, 1, last - 1, 3).clearContent();
+    d.getRange(2, 1, list.length, 3).setValues(list.map(function (x) { return [x.guest, x.date || '', Number(x.seats) || 6]; }));
+    cache.put('synced', '1', 300);
+  } catch (e) {}
+}
+function refreshFromSite() { syncDinners_(true); SpreadsheetApp.getUi().alert('The Dinners tab now matches the course site.'); }
 
 function setup() {
   var ss = SpreadsheetApp.getActive();
@@ -48,6 +68,7 @@ function setup() {
     a.setFrozenRows(1);
   }
   PropertiesService.getScriptProperties().setProperty('status', 'open');
+  syncDinners_(true);
   ss.toast('Done. Now deploy it as a web app: Deploy > New deployment > Web app, Execute as Me, access Anyone.', 'VC Law dinners', 15);
 }
 
@@ -56,6 +77,7 @@ function onOpen() {
     .addItem('Open sign-ups', 'openSignups')
     .addItem('Close sign-ups', 'closeSignups')
     .addSeparator()
+    .addItem('Refresh the dinner list from the site', 'refreshFromSite')
     .addItem('Run the matching', 'runMatching')
     .addItem('Email everyone their dinner', 'emailEveryone')
     .addToUi();
@@ -91,6 +113,7 @@ function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).se
 
 /* The site reads the dinners and whether sign-ups are open. */
 function doGet() {
+  syncDinners_(false);
   var status = PropertiesService.getScriptProperties().getProperty('status') || 'open';
   var counts = {};
   picks_().forEach(function (s) { if (s.ranks[0]) counts[s.ranks[0]] = (counts[s.ranks[0]] || 0) + 1; });
@@ -129,6 +152,7 @@ function doPost(e) {
    a random draw decides. Then second choices for everyone still without a seat,
    and so on. Anyone left over goes to the dinner with the most open seats. */
 function runMatching() {
+  syncDinners_(true);
   var ds = dinners_(), ps = picks_();
   var left = {}; ds.forEach(function (d) { left[d.guest] = d.seats; });
   var placed = {}, out = [];
