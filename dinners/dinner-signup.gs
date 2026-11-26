@@ -46,7 +46,7 @@ function setup() {
     a.setFrozenRows(1);
   }
   PropertiesService.getScriptProperties().setProperty('status', 'open');
-  try { SpreadsheetApp.getUi().alert('Done. Now deploy it as a web app: Deploy > New deployment > Web app, Execute as Me, access Anyone.'); } catch (e) {}
+  ss.toast('Done. Now deploy it as a web app: Deploy > New deployment > Web app, Execute as Me, access Anyone.', 'VC Law dinners', 15);
 }
 
 function onOpen() {
