@@ -50,7 +50,7 @@ function schedRow(w, glance) {
     <p><span class="k">Practice.</span> ${ed("W." + i + ".focus", w.focus)}</p>
     <p><span class="k">Lived Experience.</span> ${ed("W." + i + ".guest", w.guest)}${w.proposedGuests ? ` <span class="quiet">(proposed: ${esc(w.proposedGuests)})</span>` : ""}</p>`}</div></li>`;
 }
-const TOOLNAME = { captable: "Cap table", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
+const TOOLNAME = { captable: "Cap table", movie: "Cap table movie", dilution: "Dilution", waterfall: "Exit waterfall", termsheets: "Term sheets", tax: "Tax", fund: "Fund economics" };
 const classDate = (w) => new Date(w.date + ", 2027 23:59");
 function currentWeek() { const now = new Date(); return WEEKS.find((w) => classDate(w) >= now); }
 function scenButtons(w) {
@@ -187,7 +187,7 @@ const DEFAULT = {
 };
 let ST = (() => { const d = JSON.parse(JSON.stringify(DEFAULT)), s = store.get("vcl-cap-v2", {}); Object.keys(d).forEach((k) => { if (s[k] !== undefined) d[k] = (typeof d[k] === "object" && !Array.isArray(d[k])) ? Object.assign(d[k], s[k]) : s[k]; }); return d; })();
 const save = () => store.set("vcl-cap-v2", ST);
-const TOOLS = [["captable", "Cap table"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
+const TOOLS = [["captable", "Cap table"], ["movie", "Cap table movie"], ["dilution", "Dilution"], ["waterfall", "Exit waterfall"], ["termsheets", "Term sheets"], ["tax", "Tax"], ["fund", "Fund economics"]];
 const tabs = (on) => `<div class="tabs">${TOOLS.map(([k, l]) => `<a href="#${k}" class="${k === on ? "on" : ""}">${l}</a>`).join("")}</div>${SHARED ? `<p class="ask" style="margin-top:-12px">You opened a shared link, so these are the sender’s numbers. Press Start over to go back to the class defaults.</p>` : ""}<p class="sharerow"><button type="button" class="ghost" id="share">Copy link to these numbers</button><span class="quiet" id="sharemsg" aria-live="polite"></span></p><p class="quiet" id="sharebox" hidden></p>`;
 
 const GRANT_STAGES = ["Incorporation", "Pre-seed", "Seed", "Series A", "Series B"];
@@ -429,11 +429,11 @@ function waterfallView() {
   const termF = (c) => `<fieldset><legend>${c === "Seed" ? "Seed preferred" : "Series " + c}</legend>${inp(`terms.${c}.mult`, t[c].mult, "n", "Preference ×")}<label class="f">Participates<select id="i-terms-${c}-part" data-k="terms.${c}.part"><option value="">No</option><option value="1" ${t[c].part ? "selected" : ""}>Yes</option></select></label>${inp(`terms.${c}.capMult`, t[c].capMult, "n", "Participation cap × (0 for none)", "w")}</fieldset>`;
   setTimeout(() => {
     const c = document.getElementById("ctl");
-    bind(c, ST, () => { save(); drawWF(); });
+    bind(c, ST, () => { save(); drawWF(); flowInit(); });
     c.addEventListener("change", (e) => { if (e.target.tagName === "SELECT") { const k = e.target.dataset.k; if (k && k.endsWith(".part")) ST.terms[k.split(".")[1]].part = !!e.target.value; save(); drawWF(); } });
     const sl = document.getElementById("exs");
     sl.addEventListener("input", () => { ST.wf.exit = sliderToExit(+sl.value); document.getElementById("i-wf-exit").value = +(ST.wf.exit / 1e6).toFixed(1); save(); drawWF(); });
-    drawWF();
+    drawWF(); flowInit();
   });
   const holders = computeCap(ST).last.holders.map((h) => h.name).concat("Employees (granted options)");
   return `<h1>Tools</h1>${tabs("waterfall")}
@@ -444,7 +444,7 @@ function waterfallView() {
     <label class="f w">Preferred ranking<select id="i-wf-sen" data-k="wf.seniority"><option value="pari" ${ST.wf.seniority === "pari" ? "selected" : ""}>Equal (pari passu)</option><option value="stacked" ${ST.wf.seniority === "stacked" ? "selected" : ""}>Latest round paid first</option></select></label></fieldset>
     <details><summary>Preferred stock terms</summary><div class="ctl">${cls.map(termF).join("")}</div></details></form>
   <div class="res" id="res"></div></div>
-  <p class="quiet">Granted options are treated as exercised, ignoring the strike price. Unallocated options get nothing. Preferred stock converts to common whenever that pays more.</p>`;
+  <p class="quiet">Granted options are treated as exercised, ignoring the strike price. Unallocated options get nothing. Preferred stock converts to common whenever that pays more.</p>${flowHTML()}`;
 }
 function wfRun(state, exit) {
   const terms = {}; Object.keys(ST.terms).forEach((k) => (terms[k] = { mult: +ST.terms[k].mult || 0, part: !!ST.terms[k].part, capMult: +ST.terms[k].capMult || 0 }));
@@ -977,9 +977,172 @@ function inboxView(n) {
 }
 
 /* ---------- Router ---------- */
-const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
+const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, guests: guestsView, dinners: dinnersView, library, case: caseView, captable, movie, dilution, waterfall: waterfallView, termsheets, tax, fund: fundView };
+/* ---------- Motion: cap table movie and money flow ---------- */
+  const reduce = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let MOVIE_T = null, FLOW_RAF = null;
+  const stopAll = () => { clearTimeout(MOVIE_T); MOVIE_T = null; cancelAnimationFrame(FLOW_RAF); FLOW_RAF = null; };
+  window.addEventListener("hashchange", stopAll);
+
+  /* ---------- Cap table movie ---------- */
+  const GROUP = (name, cls) => {
+    if (ST.founders.some((f) => f.name === name)) return name;
+    if (name === "Options granted") return "Employees’ options";
+    if (name === "Option pool") return "Unallocated pool";
+    if (/^Angel|SAFE/i.test(name) || ST.safes.some((s) => s.name === name)) return "Angels (SAFEs)";
+    if (name === ST.Seed.investor) return "Seed lead";
+    if (name === ST.A.investor) return "Series A lead";
+    if (name.startsWith(ST.B.investor)) return "Series B lead";
+    return name;
+  };
+  function frames() {
+    const cap = computeCap(ST);
+    const fr = cap.stages.map((st) => {
+      const own = ownG(st.s), g = {};
+      own.rows.forEach((r) => { const k = GROUP(r.name, r.cls); g[k] = (g[k] || 0) + r.pct; });
+      return { name: st.name, st, g };
+    });
+    const founders = (f) => ST.founders.reduce((a, x) => a + (f.g[x.name] || 0), 0);
+    const cap0 = fr[0], f = fr;
+    const sP = (x) => x.st.pref ? "$" + x.st.pref.toFixed(x.st.pref < 1 ? 3 : 2) : "";
+    const cap1 = Math.min(...ST.safes.filter((s) => s.cap > 0).map((s) => s.cap));
+    const tell = [
+      `Three founders split the company and set aside ${pct(cap0.g["Unallocated pool"] + (cap0.g["Employees’ options"] || 0), 0)} for future employees. Dana, the first engineer, gets the first option grant. The founders own ${pct(founders(cap0), 0)}.`,
+      `Two angels write SAFEs (${money(ST.safes.reduce((a, s) => a + (+s.inv || 0), 0))} in all). A SAFE isn’t stock yet. This frame shows what the angels would own if their SAFEs converted at the ${isFinite(cap1) ? money(cap1) : ""} cap. The founders are at about ${pct(founders(f[1]), 0)}.`,
+      `The Seed round prices the company at ${money(ST.Seed.pre)} before the money, at ${sP(f[2])} a share. The SAFEs convert now, and the pool is topped up before the new money comes in, so the founders pay for it. Founders: ${pct(founders(f[2]), 0)}.`,
+      `Series A: ${money(ST.A.inv)} at ${money(ST.A.pre)} pre-money (${sP(f[3])} a share). Everyone is diluted, the pool is refreshed again, and new hires get grants. Founders: ${pct(founders(f[3]), 0)}.`,
+      `Series B: ${money(ST.B.inv)} at ${money(ST.B.pre)} pre-money. ${ST.B.sec ? `Charlie also sells ${Math.round(ST.B.sec).toLocaleString()} shares to the Series B lead.` : ""} The founders now own ${pct(founders(f[4]), 0)}, a smaller slice of a much more valuable company.`
+    ];
+    fr.forEach((x, i) => (x.say = tell[i] || ""));
+    return fr;
+  }
+  let MI = 0, MPLAY = false;
+  function movie() {
+    stopAll(); MI = 0; MPLAY = false;
+    setTimeout(() => {
+      const root = document.getElementById("mv"); if (!root) return;
+      root.addEventListener("click", (e) => {
+        const b = e.target.closest("button"); if (!b) return;
+        if (b.dataset.go !== undefined) { MPLAY = false; show(+b.dataset.go); }
+        if (b.id === "mvplay") { MPLAY = !MPLAY; if (MPLAY && MI >= 4) show(0); tick(); paintBtn(); }
+      });
+      show(0, true);
+    });
+    return `<h1>Tools</h1>${tabs("movie")}
+    <p class="sub">Watch who owns Mostly Human AI change, round by round. It uses the numbers from the Cap table and Dilution tabs, so change them there and come back.</p>
+    <div id="mv" class="movie">
+      <div class="mvhead"><button type="button" id="mvplay" class="mvplay">▶ Play</button><div class="mvsteps" id="mvsteps"></div></div>
+      <div class="mvstage"><div class="mvname" id="mvname"></div><div class="mvbar" id="mvbar"></div><p class="mvsay" id="mvsay"></p></div>
+      <div class="mvrows" id="mvrows"></div>
+    </div>`;
+  }
+  let FR = null, COL = {};
+  function paintBtn() { const b = document.getElementById("mvplay"); if (b) b.textContent = MPLAY ? "❚❚ Pause" : MI >= 4 ? "↺ Play again" : "▶ Play"; }
+  function tick() {
+    clearTimeout(MOVIE_T);
+    if (!MPLAY) return;
+    MOVIE_T = setTimeout(() => { if (!document.getElementById("mv")) return; if (MI < FR.length - 1) { show(MI + 1); tick(); } else { MPLAY = false; paintBtn(); } }, MI === 0 && !document.querySelector(".mvseg") ? 300 : 4200);
+  }
+  function show(i, first) {
+    if (first || !FR) {
+      try { FR = frames(); } catch (e) { document.getElementById("mv").innerHTML = '<p class="quiet">Fix the cap table first.</p>'; return; }
+      const names = []; FR.forEach((f) => Object.keys(f.g).forEach((k) => { if (!names.includes(k)) names.push(k); }));
+      const order = ["Abigail", "Bernard", "Charlie", "Employees’ options", "Unallocated pool", "Angels (SAFEs)", "Seed lead", "Series A lead", "Series B lead"];
+      names.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
+      const pal = { Abigail: "#cfb87c", Bernard: "#86692a", Charlie: "#b3a37a", "Employees’ options": "#6b7a45", "Unallocated pool": "#cfd6c0", "Angels (SAFEs)": "#c97b5a", "Seed lead": "#3f6e8c", "Series A lead": "#6c3f6e", "Series B lead": "#a6432b" };
+      COL = {}; names.forEach((n, k) => (COL[n] = pal[n] || PAL[k % PAL.length]));
+      document.getElementById("mvbar").innerHTML = names.map((n) => `<div class="mvseg" data-n="${esc(n)}" style="width:0;background:${COL[n]}" title="${esc(n)}"><span></span></div>`).join("");
+      document.getElementById("mvrows").innerHTML = names.map((n) => `<div class="mvrow" data-n="${esc(n)}"><i style="background:${COL[n]}"></i><span>${esc(n)}</span><b>0%</b></div>`).join("");
+      document.getElementById("mvsteps").innerHTML = FR.map((f, k) => `<button type="button" data-go="${k}" class="mvstep">${esc(f.name)}</button>`).join("");
+    }
+    MI = i; const f = FR[i];
+    document.querySelectorAll(".mvstep").forEach((b, k) => { b.classList.toggle("on", k === i); b.classList.toggle("done", k < i); });
+    document.getElementById("mvname").textContent = f.name + (f.st.est ? " (if the SAFEs converted)" : "");
+    const say = document.getElementById("mvsay"); say.classList.remove("in"); void say.offsetWidth; say.textContent = f.say; say.classList.add("in");
+    requestAnimationFrame(() => {
+      document.querySelectorAll(".mvseg").forEach((el) => { const v = f.g[el.dataset.n] || 0; el.style.width = (v * 100) + "%"; el.querySelector("span").textContent = v > 0.06 ? el.dataset.n.replace(/ lead$/, "").replace(/’ options$/, "").replace(/ \(SAFEs\)$/, "").replace("Unallocated pool", "Pool") + " " + pct(v, 0) : ""; });
+      document.querySelectorAll(".mvrow").forEach((el) => {
+        const to = f.g[el.dataset.n] || 0, b = el.querySelector("b"), from = parseFloat(b.textContent) / 100 || 0;
+        el.classList.toggle("zero", to < 0.0005);
+        if (reduce()) { b.textContent = pct(to); return; }
+        const t0 = performance.now(), D = 900;
+        const step = (t) => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); b.textContent = pct(from + (to - from) * e); if (k < 1) requestAnimationFrame(step); };
+        requestAnimationFrame(step);
+      });
+    });
+    paintBtn();
+  }
+
+  /* ---------- Money flow (added to the Exit waterfall tab) ---------- */
+  function flowHTML() {
+    return `<section class="flow" id="flow"><h2>Watch the money flow</h2>
+    <p class="quiet">Press play and the sale price climbs. Each claim fills in the order it gets paid: any lender first, then the preferred stock’s preferences, then whatever is left goes to the common. Watch for the moment a series would rather convert.</p>
+    <div class="flowctl"><button type="button" id="flplay" class="mvplay">▶ Play</button><input type="range" id="flr" min="0" max="1000" value="0" aria-label="Sale price"><b id="flpx">$0</b></div>
+    <div id="flrows" class="flrows"></div><p class="mvsay in" id="flsay"></p></section>`;
+  }
+  function flowInit() {
+    const box = document.getElementById("flow"); if (!box) return;
+    let cap; try { cap = computeCap(ST); } catch (e) { return; }
+    const state = cap.last, TOP = Math.max(2 * (cap.last.post || 0), 3e8);
+    const prefCls = ["B", "A", "Seed"].filter((c) => state.holders.some((h) => h.cls === c && h.shares > 0));
+    const label = { B: "Series B", A: "Series A", Seed: "Seed" };
+    const prefNeed = {}; prefCls.forEach((c) => (prefNeed[c] = state.holders.filter((h) => h.cls === c && !h.secondary).reduce((a, h) => a + (h.invested || 0), 0) * (+ST.terms[c].mult || 0)));
+    const isF = (n) => ST.founders.some((f) => f.name === n);
+    const rowsDef = [];
+    if (+ST.wf.debt) rowsDef.push({ k: "debt", n: "Venture lender", c: "#5a6470" });
+    if (+ST.wf.fees) rowsDef.push({ k: "fees", n: "Deal fees", c: "#8a96a1" });
+    prefCls.forEach((c, i) => rowsDef.push({ k: c, n: label[c] + " preferred", c: ["#a6432b", "#6c3f6e", "#3f6e8c"][i] || "#3f6e8c", need: prefNeed[c] }));
+    rowsDef.push({ k: "F", n: "Founders", c: "#cfb87c" }, { k: "E", n: "Employees", c: "#6b7a45" }, { k: "O", n: "Other common", c: "#b3a37a" });
+    const rows = document.getElementById("flrows");
+    rows.innerHTML = rowsDef.map((r) => `<div class="flrow" data-k="${r.k}"><span>${esc(r.n)}</span><div class="fltrack"><div class="flfill" style="background:${r.c}"></div>${r.need ? `<i class="flneed" title="Preference"></i>` : ""}</div><b>$0</b><em></em></div>`).join("");
+    const val = (x) => {
+      const w = wfRun(state, x), by = (p) => w.byHolder.filter(p).reduce((a, h) => a + h.value, 0);
+      const out = { debt: by((h) => h.cls === "Debt"), fees: by((h) => h.cls === "Fees") };
+      prefCls.forEach((c) => (out[c] = w.classPay[c] || 0));
+      out.F = by((h) => isF(h.name)); out.E = by((h) => h.cls === "Options");
+      out.O = Math.max(0, (w.classPay.common || 0) - out.F - out.E);
+      return { out, conv: w.conv };
+    };
+    const MAXV = Math.max(...rowsDef.map((r) => val(TOP).out[r.k] || 0), 1);
+    rowsDef.forEach((r) => { if (r.need) { const el = rows.querySelector(`[data-k="${r.k}"] .flneed`); el.style.left = Math.min(100, r.need / MAXV * 100) + "%"; } });
+    const sl = document.getElementById("flr"), px = document.getElementById("flpx"), say = document.getElementById("flsay"), btn = document.getElementById("flplay");
+    const paint = (x) => {
+      const { out, conv } = val(x);
+      px.textContent = money(x);
+      rowsDef.forEach((r) => {
+        const el = rows.querySelector(`[data-k="${r.k}"]`), v = out[r.k] || 0;
+        el.querySelector(".flfill").style.width = Math.min(100, v / MAXV * 100) + "%";
+        el.querySelector("b").textContent = money(v);
+        el.querySelector("em").textContent = conv[r.k] ? "converts to common" : r.need && v >= r.need * 0.999 && v > 0 ? "preference paid" : "";
+        el.classList.toggle("conv", !!conv[r.k]);
+      });
+      const debt = +ST.wf.debt || 0, prefTot = prefCls.reduce((a, c) => a + (conv[c] ? 0 : prefNeed[c]), 0), common = out.F + out.E + out.O;
+      const convd = prefCls.filter((c) => conv[c]).map((c) => label[c]);
+      say.textContent = x <= 0 ? "Press play." : debt && x <= debt ? "Everything so far goes to the lender. Debt is always paid before any stock." :
+        common < 1 ? `The preferred stock is collecting its preferences. The founders and employees get nothing until about ${money(debt + prefTot + (+ST.wf.fees || 0) * x)} has been paid out.` :
+        convd.length ? `${convd.length > 2 ? convd.slice(0, -1).join(", ") + " and " + convd[convd.length - 1] : convd.join(" and ")} ${convd.length > 1 ? "have" : "has"} given up the preference and converted, because a share of the common is now worth more. From here everyone shares in proportion to ownership.` :
+        "Preferences are paid. Everything above them is shared among the common, plus any participating preferred.";
+    };
+    let x = 0, playing = false, last = 0;
+    const toX = (v) => TOP * Math.pow(v / 1000, 1.6), fromX = (p) => 1000 * Math.pow(p / TOP, 1 / 1.6);
+    const loop = (t) => {
+      if (!document.getElementById("flow")) return;
+      const dt = last ? t - last : 16; last = t;
+      let v = +sl.value + dt * 0.09; if (v >= 1000) { v = 1000; playing = false; btn.textContent = "↺ Play again"; }
+      sl.value = v; x = toX(v); paint(x);
+      if (playing) FLOW_RAF = requestAnimationFrame(loop);
+    };
+    btn.onclick = () => {
+      playing = !playing; btn.textContent = playing ? "❚❚ Pause" : "▶ Play";
+      if (playing) { if (+sl.value >= 1000) sl.value = 0; last = 0; if (reduce()) { sl.value = 1000; paint(TOP); playing = false; btn.textContent = "↺ Play again"; return; } FLOW_RAF = requestAnimationFrame(loop); }
+      else cancelAnimationFrame(FLOW_RAF);
+    };
+    sl.oninput = () => { playing = false; btn.textContent = "▶ Play"; cancelAnimationFrame(FLOW_RAF); paint(toX(+sl.value)); };
+    paint(0);
+  }
+
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
-const SECTION = { syllabus: "home", people: "case", captable: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
+const SECTION = { syllabus: "home", people: "case", captable: "tools", movie: "tools", dilution: "tools", waterfall: "tools", termsheets: "tools", tax: "tools", fund: "tools" };
 function route() {
   let h = (location.hash || "#home").slice(1); h = ALIAS[h] || h;
   const wk = /^week-(\d+)$/.exec(h), ib = /^inbox-(\d+)$/.exec(h);
