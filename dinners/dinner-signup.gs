@@ -32,7 +32,9 @@ function setup() {
     d.getRange(1, 1, 1, 3).setValues([['Guest', 'Date', 'Seats']]).setFontWeight('bold');
     var rows = old.filter(function (r) { return String(r[0]).trim(); })
       .map(function (r) { return [r[0], '', Number(r[1]) || 6]; });
-    if (rows.length) d.getRange(2, 1, rows.length, 3).setValues(rows);
+    if (!rows.length) rows = ['Ron Zori', 'Taylor Sargent', 'Mason Angel', 'David Cohen', 'Erick Rabin', 'Megan Baier', 'Jamie Anderson', 'Elliott Portnoy', 'Michelle Longmire', 'Jerry Colonna']
+      .map(function (g) { return [g, '', 6]; });
+    d.getRange(2, 1, rows.length, 3).setValues(rows);
     d.setFrozenRows(1);
   }
   var p = ss.getSheetByName('Picks') || ss.insertSheet('Picks');
