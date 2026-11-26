@@ -67,7 +67,7 @@ window.PEOPLE = [
         classes: "Formation (class 2), the founder dispute (class 6), departure and secondary (class 8), liquidity (class 12)" }
     ] },
   { group: "Employees",
-    note: "Mostly Human AI grows from three people to about 60 by the Series B. Their option grants are on the Cap table tab.",
+    note: "Mostly Human AI grows from three people to about 60 by the Series B. Two of them write to you. Others, like Farah Gomez (VP Sales) and Hana Kim (CFO), appear only on the Cap table tab with their option grants.",
     people: [
       { name: "Dana Park", role: "First engineer",
         line: "Wrote early Minion code on weekends while still at her old job. Her first startup, and her first equity.",
@@ -86,23 +86,7 @@ window.PEOPLE = [
         says: "“This is totally standard at later-stage companies.” “Can we just do a note?” “Bernard already said yes.”",
         writes: "Crisp and confident, with the right terms and the occasional emoji. Copies Bernard.",
         habits: "Asks the company for a loan to cover the exercise price, on a promissory note secured by the shares. The student has to spot the issues: board approval; recourse versus non-recourse (a non-recourse note is generally treated as an option for tax and accounting, so the early exercise doesn’t do what he wants); interest at least at the IRS applicable federal rate; tax if the loan is ever forgiven; how it looks to investors; and the Sarbanes-Oxley ban on loans to executive officers once the company files for an IPO, so the note has to be repaid before then.",
-        classes: "Employee equity, 409A, governance, IPO" },
-      { name: "Farah Gomez", role: "VP Sales",
-        line: "Hired after the Seed from a larger startup. Knows exactly what her peers got.",
-        like: "Direct, numbers-driven, a good negotiator. Talks to everyone, so what she hears, the whole company hears.",
-        wants: "Liquidity, and to know what her options are really worth.",
-        irks: "Vague answers about money. Hearing about company news secondhand.",
-        says: "“Two quick questions.” “What did everyone else get?”",
-        writes: "Short and pointed. Asks two questions at once.",
-        classes: "Employee equity, departures, liquidity" },
-      { name: "Hana Kim", role: "CFO",
-        line: "Joins at the Series A from a public company.",
-        like: "Rigorous and calm. Becomes counsel’s best ally inside the company, and sometimes its toughest critic on bills.",
-        wants: "Clean books, a clean 409A, and no surprises for the board.",
-        irks: "Legal bills without detail. Surprises in a board deck.",
-        says: "“Can you walk me through the number?” “What’s the downside case?”",
-        writes: "Spreadsheets attached. Precise questions about numbers.",
-        classes: "Employee equity, tax, debt, exit" }
+        classes: "Employee equity, 409A, governance, IPO" }
     ] },
   { group: "Investors and others",
     note: "The people across the table.",
