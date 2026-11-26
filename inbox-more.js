@@ -360,7 +360,7 @@ Object.assign(window.INBOX, {
     "from": "Eli Brooks",
     "role": "Head of product, Mostly Human AI",
     "subject": "Early exercise + a note?",
-    "body": "Hi! 👋\n\nI'd like to early-exercise all 200,000 of my options ($0.10 strike, so $20,000) and file an 83(b), so my capital gains and QSBS clocks start now. I don't want to tie up the cash, so can the company just lend me the $20K on a note secured by the shares? Totally standard at later-stage companies. Bernard already said yes.\n\nEli\n(cc Bernard)",
+    "body": "Hi! 👋\n\nI'd like to early-exercise all 200,000 of my options ($0.07 strike, so $14,000) and file an 83(b), so my capital gains and QSBS clocks start now. I don't want to tie up the cash, so can the company just lend me the $14K on a note secured by the shares? Totally standard at later-stage companies. Bernard already said yes.\n\nEli\n(cc Bernard)",
     "good": [
      "Board approval, not Bernard's yes",
      "A non-recourse note is generally treated as an option for tax, so the 83(b) and holding-period benefits may not work; it should be full recourse",

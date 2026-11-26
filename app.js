@@ -244,7 +244,33 @@ function ownG(state) {
   const holders = opt.length ? rest.concat([{ name: "Options granted", cls: "Options", shares: SIM.sum(opt.map((h) => h.shares)) }]) : rest;
   return SIM.ownership({ ...state, holders });
 }
-const colorMap = (names) => { const m = {}; names.forEach((n, i) => (m[n] = PAL[i % PAL.length])); return m; };
+const FOUNDER_C = ["#2b5f8a", "#b5651d", "#5e8c61", "#7d6b4f"];
+function colorFor(name, i) {
+  const n = String(name), fi = ST.founders.findIndex((f) => f.name === n);
+  if (fi >= 0) return FOUNDER_C[fi % FOUNDER_C.length];
+  if (/^(Option pool|Unallocated pool|Available for grant)$/.test(n)) return "#d9d4c7";
+  const gi = (ST.grants || []).findIndex((g) => g.name === n);
+  if (gi >= 0) return ["#e0b84c", "#b98a24", "#ecd187", "#8f6b1c", "#d4a93f", "#f2e2ad", "#a77d22"][gi % 7];
+  if (/Employees|Options granted|options/i.test(n)) return "#e0b84c";
+  if (/^Founders$/.test(n)) return "#2b5f8a";
+  if (/^Other common$/.test(n)) return "#b8a989";
+  if (/secondary/i.test(n)) return "#d9826b";
+  if (/Series B/i.test(n) || n === ST.B.investor) return "#a23b2a";
+  if (/Series A/i.test(n) || n === ST.A.investor) return "#5b4a8b";
+  if (/^Seed/i.test(n) || n === ST.Seed.investor) return "#2f7f7a";
+  if (/Angel|SAFE|Ruth/i.test(n)) return "#8e4f7a";
+  if (/Marcus/i.test(n)) return "#b07aa1";
+  if (/lender|Debt/i.test(n)) return "#4a4f57";
+  if (/fees/i.test(n)) return "#9aa1a9";
+  return PAL[i % PAL.length];
+}
+// Text color that stays readable on a given fill.
+function inkOn(hex) {
+  const h = String(hex).replace("#", ""); if (h.length < 6) return "#1a1917";
+  const [r, g, b] = [0, 2, 4].map((k) => { const c = parseInt(h.slice(k, k + 2), 16) / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.3 ? "#1a1917" : "#ffffff";
+}
+const colorMap = (names) => { const m = {}, seen = {}; names.forEach((n, i) => { let c = colorFor(n, i); if (/^Angel/.test(n)) { seen.angel = (seen.angel || 0) + 1; if (seen.angel === 2) c = "#b07aa1"; if (seen.angel > 2) c = PAL[i % PAL.length]; } m[n] = c; }); return m; };
 function bind(root, obj, after) {
   root.addEventListener("input", (e) => {
     const el = e.target, k = el.dataset.k; if (!k) return;
@@ -483,7 +509,7 @@ function drawWF() {
     const ticks = [0, 0.5, 1].map((v) => `<text x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end">${v * 100}%</text>`).join("");
     const xt = [0.25, 0.5, 0.75, 1].filter((v, i) => W > 520 || i % 2).map((v) => `<text x="${m.l + v * iw}" y="${H - 8}" text-anchor="${v === 1 ? "end" : "middle"}">${money(top * v)}</text>`).join("");
     const cx = m.l + Math.min(1, ex / top) * iw;
-    svg.innerHTML = paths + ticks + xt + `<line x1="${cx}" x2="${cx}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--ink)" stroke-width="2"/><text x="${Math.min(cx + 6, W - 70)}" y="${m.t + 14}">This sale</text>`;
+    svg.innerHTML = paths + ticks + xt + `<line x1="${cx}" x2="${cx}" y1="${m.t}" y2="${m.t + ih}" stroke="var(--ink)" stroke-width="2"/><text x="${Math.min(cx + 6, W - 70)}" y="${m.t + 14}" class="halo">This sale</text>`;
   };
   if (window._wro) window._wro.disconnect();
   window._wro = new ResizeObserver(draw); window._wro.observe(svg);
@@ -504,7 +530,7 @@ function termsheets() {
     return { t, r, fo, pays };
   });
   const k = Math.max(0, TS.findIndex((t) => t.id === TSEL)), c = calc[k];
-  const names = [...new Set(calc.flatMap((x) => x.r.holders.map((h) => h.name)))].concat("Option pool");
+  const names = [...new Set(calc.flatMap((x) => x.r.holders.map((h) => h.name)))].concat("Options granted", "Option pool");
   const col = colorMap(names);
   const best = (vals, i) => vals[i] === Math.max(...vals);
   const short = (t) => t.name.replace(/:.*$/, "");
@@ -1051,8 +1077,8 @@ const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, gues
       const order = ["Abigail", "Bernard", "Charlie", "Employees’ options", "Unallocated pool", "Angels (SAFEs)", "Seed lead", "Series A lead", "Series B lead"];
       names.sort((a, b) => (order.indexOf(a) + 1 || 99) - (order.indexOf(b) + 1 || 99));
       const pal = { Abigail: "#cfb87c", Bernard: "#86692a", Charlie: "#b3a37a", "Employees’ options": "#6b7a45", "Unallocated pool": "#cfd6c0", "Angels (SAFEs)": "#c97b5a", "Seed lead": "#3f6e8c", "Series A lead": "#6c3f6e", "Series B lead": "#a6432b" };
-      COL = {}; names.forEach((n, k) => (COL[n] = pal[n] || PAL[k % PAL.length]));
-      document.getElementById("mvbar").innerHTML = names.map((n) => `<div class="mvseg" data-n="${esc(n)}" style="width:0;background:${COL[n]}" title="${esc(n)}"><span></span></div>`).join("");
+      COL = {}; names.forEach((n, k) => (COL[n] = colorFor(n, k)));
+      document.getElementById("mvbar").innerHTML = names.map((n) => `<div class="mvseg" data-n="${esc(n)}" style="width:0;background:${COL[n]};color:${inkOn(COL[n])}" title="${esc(n)}"><span></span></div>`).join("");
       document.getElementById("mvrows").innerHTML = names.map((n) => `<div class="mvrow" data-n="${esc(n)}"><i style="background:${COL[n]}"></i><span>${esc(n)}</span><b>0%</b></div>`).join("");
       document.getElementById("mvsteps").innerHTML = FR.map((f, k) => `<button type="button" data-go="${k}" class="mvstep">${esc(f.name)}</button>`).join("");
     }
@@ -1090,10 +1116,10 @@ const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, gues
     const prefNeed = {}; prefCls.forEach((c) => (prefNeed[c] = state.holders.filter((h) => h.cls === c && !h.secondary).reduce((a, h) => a + (h.invested || 0), 0) * (+ST.terms[c].mult || 0)));
     const isF = (n) => ST.founders.some((f) => f.name === n);
     const rowsDef = [];
-    if (+ST.wf.debt) rowsDef.push({ k: "debt", n: "Venture lender", c: "#5a6470" });
-    if (+ST.wf.fees) rowsDef.push({ k: "fees", n: "Deal fees", c: "#8a96a1" });
-    prefCls.forEach((c, i) => rowsDef.push({ k: c, n: label[c] + " preferred", c: ["#a6432b", "#6c3f6e", "#3f6e8c"][i] || "#3f6e8c", need: prefNeed[c] }));
-    rowsDef.push({ k: "F", n: "Founders", c: "#cfb87c" }, { k: "E", n: "Employees", c: "#6b7a45" }, { k: "O", n: "Other common", c: "#b3a37a" });
+    if (+ST.wf.debt) rowsDef.push({ k: "debt", n: "Venture lender", c: colorFor("Venture lender", 0) });
+    if (+ST.wf.fees) rowsDef.push({ k: "fees", n: "Deal fees", c: colorFor("Deal fees", 0) });
+    prefCls.forEach((c, i) => rowsDef.push({ k: c, n: label[c] + " preferred", c: colorFor(label[c], i), need: prefNeed[c] }));
+    rowsDef.push({ k: "F", n: "Founders", c: colorFor("Founders", 0) }, { k: "E", n: "Employees", c: colorFor("Employees", 0) }, { k: "O", n: "Other common", c: colorFor("Other common", 0) });
     const rows = document.getElementById("flrows");
     rows.innerHTML = rowsDef.map((r) => `<div class="flrow" data-k="${r.k}"><span>${esc(r.n)}</span><div class="fltrack"><div class="flfill" style="background:${r.c}"></div>${r.need ? `<i class="flneed" title="Preference"></i>` : ""}</div><b>$0</b><em></em></div>`).join("");
     const val = (x) => {
@@ -1151,16 +1177,16 @@ function safex() {
     paint();
   });
   const fld = (k, u, l) => `<label class="f">${l}${u === "M" ? " ($M)" : u === "%" ? " (%)" : ""}<input type="number" step="any" data-x="${k}" data-u="${u}" value="${u === "M" ? SX[k] / 1e6 : u === "%" ? +(SX[k] * 100).toFixed(2) : SX[k]}"></label>`;
-  const pie = (f, col, label) => `<div class="pie" style="background:conic-gradient(${col} 0 ${Math.max(0, Math.min(1, f)) * 360}deg, var(--line) 0)" role="img" aria-label="${esc(label)}: ${pct(f, 2)}"><span>${pct(f, 2)}</span></div><div class="pielg"><span><i style="background:${col}"></i>${esc(label)} ${pct(f, 2)}</span><span><i style="background:var(--line)"></i>Everyone else</span></div>`;
+  const pie = (f, col, label) => `<div class="spie" style="background:conic-gradient(${col} 0 ${Math.max(0, Math.min(1, f)) * 360}deg, var(--line) 0)" role="img" aria-label="${esc(label)}: ${pct(f, 2)}"><span>${pct(f, 2)}</span></div><div class="pielg"><span><i style="background:${col}"></i>${esc(label)} ${pct(f, 2)}</span><span><i style="background:var(--line)"></i>Everyone else</span></div>`;
   function paint() {
     const el = document.getElementById("sxout"); if (!el) return;
     const capF = SX.rCap > 0 ? SX.rInv / SX.rCap : 0;
     const post = SX.pre + SX.inv, worth = SX.mInv / Math.max(0.01, 1 - SX.mDisc), discF = post > 0 ? worth / post : 0, noDiscF = post > 0 ? SX.mInv / post : 0;
-    el.innerHTML = `<div class="pies">
-      <div class="piebox"><h3>At the cap</h3>${pie(capF, "#c97b5a", "Ruth")}
+    el.innerHTML = `<div class="spies">
+      <div class="piebox"><h3>At the cap</h3>${pie(capF, colorFor("Ruth", 0), "Ruth")}
         <p class="pmath">${money(SX.rInv)} ÷ ${money(SX.rCap)} cap = <b>${pct(capF, 2)}</b></p>
         <p>Ruth’s post-money SAFE buys a fixed slice. Divide what she put in by the cap, and that’s her share of the company just before the Seed money comes in. She knows it the day she signs.</p></div>
-      <div class="piebox"><h3>With the discount</h3>${pie(discF, "#94526b", "Marcus")}
+      <div class="piebox"><h3>With the discount</h3>${pie(discF, colorFor("Marcus", 1), "Marcus")}
         <p class="pmath">${money(SX.mInv)} ÷ ${pct(1 - SX.mDisc, 0)} = <b>${money(worth)}</b> of Seed stock, or <b>${pct(discF, 2)}</b> of a ${money(post)} company</p>
         <p>Marcus’s discount means he pays ${pct(1 - SX.mDisc, 0)} of the Seed price. So his ${money(SX.mInv)} buys as many shares as ${money(worth)} would buy for the Seed investor. Without the discount he’d get ${pct(noDiscF, 2)}.</p></div>
     </div>`;

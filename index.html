@@ -230,7 +230,7 @@ img.gpic{object-position:50% 25%;background:var(--soft)}
 .mvname{font-family:"Libre Caslon Text",Georgia,serif;font-size:26px;margin-bottom:12px}
 .mvbar{display:flex;height:64px;border-radius:8px;overflow:hidden;background:var(--line)}
 .mvseg{height:100%;transition:width .9s cubic-bezier(.65,0,.35,1);overflow:hidden;position:relative;min-width:0}
-.mvseg span{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:#1a1917;white-space:nowrap;text-shadow:0 0 6px rgba(255,255,255,.5)}
+.mvseg span{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:600;color:inherit;white-space:nowrap}
 .mvsay{min-height:3.2em;margin:16px 0 14px;max-width:62ch}
 .mvsay.in{animation:fadeUp .6s ease both}
 .mvrows{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:4px 24px;margin-top:18px}
@@ -273,13 +273,14 @@ table,.big,.v{font-variant-numeric:tabular-nums}
 .gll dt{font-weight:600;margin-top:16px}.gll dd{margin:2px 0 0;color:var(--ink)}
 @media(max-width:600px){.tl:before{left:4.4em}.tl li{grid-template-columns:3.8em minmax(0,1fr);gap:22px}.tlb:before{left:-23px}}
 
-.pies{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
+.spies{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px}
 .piebox{background:var(--soft);border-radius:10px;padding:20px 22px}
 .piebox h3{margin:0 0 14px;font-family:"Libre Caslon Text",Georgia,serif;font-size:22px}
-.pie{width:200px;height:200px;border-radius:50%;margin:0 auto 14px;position:relative;display:grid;place-items:center}
-.pie span{display:none}.pielg{display:flex;justify-content:center;gap:16px;font-size:14px;margin:-4px 0 10px}.pielg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.spie{width:200px;height:200px;border-radius:50%;margin:0 auto 14px;position:relative;display:grid;place-items:center}
+.spie span{display:none}.pielg{display:flex;justify-content:center;gap:16px;font-size:14px;margin:-4px 0 10px}.pielg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
 .pmath{text-align:center;font-size:15px}
 .gl{color:inherit}.gls{display:block;font-size:14px;color:var(--mute);margin-top:4px}.gls a{color:var(--gold-d)}
+svg text.halo{paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;font-weight:600}
 </style>
 </head>
 <body>
@@ -289,14 +290,14 @@ table,.big,.v{font-variant-numeric:tabular-nums}
 </div></header>
 <main id="main"></main>
 <footer>Colorado Law · Spring 2027. The company in this course is fictional, and the numbers in the case and tools are examples for class.</footer>
-<script src="data.js?v=1126g"></script>
-<script src="sim.js?v=1126g"></script>
-<script src="assign.js?v=1126g"></script>
-<script src="inbox.js?v=1126g"></script>
-<script src="inbox-more.js?v=1126g"></script>
-<script src="people.js?v=1126g"></script>
-<script src="avatars.js?v=1126g"></script>
-<script src="glossary.js?v=1126g"></script>
-<script src="app.js?v=1126g"></script>
+<script src="data.js?v=1126h"></script>
+<script src="sim.js?v=1126h"></script>
+<script src="assign.js?v=1126h"></script>
+<script src="inbox.js?v=1126h"></script>
+<script src="inbox-more.js?v=1126h"></script>
+<script src="people.js?v=1126h"></script>
+<script src="avatars.js?v=1126h"></script>
+<script src="glossary.js?v=1126h"></script>
+<script src="app.js?v=1126h"></script>
 </body>
 </html>
