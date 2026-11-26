@@ -33,7 +33,7 @@ window.COURSE = {
   thisWeekNote: "",
   dinnerSheetId: "11Akds9BNsDOIuxniIDPcN1WHR-HbdE7rnnexpj8KKmg",
   dinnerForm: "",
-  dinnerApi: "", // web app URL from dinners/dinner-signup.gs
+  dinnerApi: "https://script.google.com/macros/s/AKfycbzuQw4ct76-A-yuXk5b4J_mqCuP-NAMsJWsm-0g0ywvaVED1lKjZ2H56KyLA3R-dnLE/exec", // web app URL from dinners/dinner-signup.gs
   instructor: { name: "Matthew Holbreich", bio: "Matthew Holbreich is a General Partner at GCVC, a venture fund backed by general counsels that invests in legal, regulatory and compliance technology, and the founder of Squad Capital, an operator fund backed by founders across the US, Europe and Israel. He also leads corporate affairs at Medable, coaches venture-backed CEOs and fund managers, and advises companies in defense and robotics. Before investing, he was a tech and venture capital lawyer at Fenwick & West and Lowenstein Sandler. Earlier, he taught philosophy and literature at Yeshiva University. He holds a JD from NYU School of Law, a PhD in political science from the University of Notre Dame and a BA from Tufts University." },
   officeHours: "By appointment.",
   email: "your.email@colorado.edu",
