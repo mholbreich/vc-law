@@ -644,12 +644,18 @@ function drawFund() {
 
 
 /* ---------- Guests ---------- */
+// A guest's photo if we have one (photo: a file in photos/ or a URL the guest sent), otherwise their initials.
+function guestPic(g, i) {
+  if (g.photo) return `<img class="gpic" src="${esc(g.photo)}" alt="" loading="lazy">`;
+  const ini = g.name.split(/\s+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return `<span class="gpic" style="background:${["#86692a", "#3f6e8c", "#a6432b", "#6b7a45", "#6c3f6e", "#2f5d5d", "#94526b", "#5a6470"][i % 8]}" aria-hidden="true">${esc(ini)}</span>`;
+}
 function guestsView() {
   return `<div class="narrow"><h1>Guests</h1>
   <p class="sub">The people joining us for The Lived Experience of Venture Capital.</p>
   <p class="quiet">Nobody is confirmed yet. Dates will be posted once they are.</p>
-  <ul class="list guests">${window.GUESTS.map((g, gi) => `<li><div class="gname">${ed("G." + gi + ".name", g.name)}${g.maybe ? ` <span class="sugg">maybe</span>` : ""}${g.org ? `<span class="gorg">${ed("G." + gi + ".org", g.org)}</span>` : ""}</div>
-    <p>${ed("G." + gi + ".bio", g.bio)}</p>${g.with ? `<p class="quiet">Same session as ${esc(g.with)}.</p>` : ""}${g.li ? `<a class="li" href="${esc(g.li)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}</li>`).join("")}</ul></div>`;
+  <ul class="list guests">${window.GUESTS.map((g, gi) => `<li class="grow">${guestPic(g, gi)}<div><div class="gname">${ed("G." + gi + ".name", g.name)}${g.maybe ? ` <span class="sugg">maybe</span>` : ""}${g.org ? `<span class="gorg">${ed("G." + gi + ".org", g.org)}</span>` : ""}</div>
+    <p>${ed("G." + gi + ".bio", g.bio)}</p>${g.with ? `<p class="quiet">Same session as ${esc(g.with)}.</p>` : ""}${g.li ? `<a class="li" href="${esc(g.li)}" target="_blank" rel="noopener">LinkedIn</a>` : ""}</div></li>`).join("")}</ul></div>`;
 }
 
 /* ---------- Dinners ----------
