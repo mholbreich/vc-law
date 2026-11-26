@@ -56,3 +56,196 @@ window.GLOSSARY = {
   "side letter": "A separate agreement giving one investor extra rights beyond the main documents.",
   "term sheet": "A short, mostly non-binding summary of a financing's key terms, signed before the full documents are drafted."
 };
+
+/* Where each term comes from: Library ids. The first one is where a click goes. */
+window.GLOSSARY_LAW = {
+"SAFE": [
+"res-yc-safe"
+],
+"post-money SAFE": [
+"res-yc-safe"
+],
+"pre-money SAFE": [
+"res-yc-safe"
+],
+"valuation cap": [
+"res-yc-safe"
+],
+"discount": [
+"res-yc-safe"
+],
+"MFN": [
+"res-yc-safe"
+],
+"pro rata": [
+"form-side-letter",
+"res-nvca"
+],
+"pre-money": [
+"res-nvca"
+],
+"post-money": [
+"res-nvca"
+],
+"fully diluted": [
+"res-nvca"
+],
+"option pool": [
+"dgcl-157",
+"res-nvca"
+],
+"pool shuffle": [
+"res-nvca"
+],
+"liquidation preference": [
+"dgcl-151",
+"res-nvca"
+],
+"participating preferred": [
+"dgcl-151",
+"res-nvca"
+],
+"conversion": [
+"dgcl-151",
+"res-nvca"
+],
+"anti-dilution": [
+"dgcl-151",
+"res-nvca"
+],
+"full ratchet": [
+"dgcl-151",
+"res-nvca"
+],
+"broad-based weighted average": [
+"dgcl-151",
+"res-nvca"
+],
+"down round": [
+"dgcl-151",
+"res-nvca"
+],
+"protective provisions": [
+"dgcl-242",
+"dgcl-151",
+"res-nvca"
+],
+"drag-along": [
+"dgcl-122",
+"res-nvca"
+],
+"ROFR": [
+"dgcl-202",
+"res-nvca"
+],
+"co-sale": [
+"res-nvca"
+],
+"Major Investor": [
+"res-nvca"
+],
+"information rights": [
+"res-nvca"
+],
+"registration rights": [
+"res-nvca",
+"form-s1"
+],
+"lock-up": [
+"rule-144",
+"res-nvca"
+],
+"vesting": [
+"irc-83"
+],
+"cliff": [
+"irc-83"
+],
+"acceleration": [
+"irc-83"
+],
+"83(b)": [
+"irc-83"
+],
+"409A": [
+"irc-409a",
+"regs-409a"
+],
+"strike price": [
+"regs-409a",
+"dgcl-157"
+],
+"ISO": [
+"irc-422"
+],
+"NSO": [
+"irc-83"
+],
+"AMT": [
+"irc-422"
+],
+"early exercise": [
+"irc-83"
+],
+"QSBS": [
+"irc-1202",
+"irc-1045"
+],
+"secondary": [
+"sec-4a7",
+"rule-144",
+"dgcl-202"
+],
+"tender offer": [
+"reg-14e",
+"rule-13e4"
+],
+"continuation fund": [
+"ica-3c1"
+],
+"DPI": [
+"kupor"
+],
+"MOIC": [
+"kupor"
+],
+"IRR": [
+"kupor"
+],
+"carried interest": [
+"kupor"
+],
+"management fee": [
+"kupor"
+],
+"power law": [
+"mallaby"
+],
+"venture debt": [
+"form-warrant"
+],
+"warrant": [
+"form-warrant",
+"dgcl-157"
+],
+"covenant": [
+"form-warrant"
+],
+"acqui-hire": [
+"dgcl-271"
+],
+"waterfall": [
+"dgcl-151",
+"res-nvca"
+],
+"fiduciary duty": [
+"dgcl-141",
+"dgcl-144"
+],
+"side letter": [
+"form-side-letter"
+],
+"term sheet": [
+"res-nvca"
+]
+};

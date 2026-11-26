@@ -126,7 +126,7 @@ function weekView(n) {
 }
 
 /* ---------- Library ---------- */
-const GROUPS = [["Resource", "Resources"], ["Form", "Forms"], ["Book", "Books"], ["Essay", "Essays"], ["Tax authority", "Tax"], ["Securities rule", "Securities and funds"], ["Ethics", "Professional responsibility"], ["Market data", "Market research"]];
+const GROUPS = [["Delaware law", "Delaware law"], ["Resource", "Resources"], ["Form", "Forms"], ["Book", "Books"], ["Essay", "Essays"], ["Tax authority", "Tax"], ["Securities rule", "Securities and funds"], ["Ethics", "Professional responsibility"], ["Market data", "Market research"]];
 let LIB = { g: "", q: "" };
 function library() {
   setTimeout(() => {
@@ -134,7 +134,7 @@ function library() {
     document.getElementById("lq").addEventListener("input", (e) => { LIB.q = e.target.value.toLowerCase(); drawLib(); });
     drawLib();
   });
-  return `<div class="narrow"><h1>Library</h1><p class="quiet" style="margin-top:-6px">New to the jargon? See the <a href="#glossary">glossary</a>.</p>
+  return `<div class="narrow">${libTabs("library")}<h1>Library</h1>
   <p class="sub">Books, model documents and sources for the course.</p>
   <label class="f" style="margin-bottom:14px">Search<input type="search" id="lq" placeholder="QSBS, NVCA, tender offer"></label>
   <div class="chips" id="chips"></div><div id="lib"></div></div>`;
@@ -146,6 +146,7 @@ function drawLib() {
   document.getElementById("lib").innerHTML = html || '<p class="quiet">Nothing matches that search.</p>';
 }
 
+const libTabs = (on) => `<div class="seg" role="tablist" aria-label="Library">${[["library", "Sources"], ["glossary", "Glossary"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
 /* ---------- Case ---------- */
 const caseTabs = (on) => `<div class="seg" role="tablist" aria-label="Case">${[["case", "The story"], ["story", "Timeline"], ["people", "The people"]].map(([k, l]) => `<a role="tab" aria-selected="${k === on}" class="${k === on ? "on" : ""}" href="#${k}">${l}</a>`).join("")}</div>`;
 function peopleView() {
@@ -1204,7 +1205,9 @@ function storyView() {
 function fmtShort(w) { try { const d = classDate(w); return d ? d.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : ""; } catch (e) { return ""; } }
 
 /* ---------- Glossary ---------- */
-const GLOSS = window.GLOSSARY || {};
+const GLOSS = window.GLOSSARY || {}, GLAW = window.GLOSSARY_LAW || {};
+const gUrl = (k) => { const id = (GLAW[k] || []).find((i) => R[i] && R[i].url); return id ? R[id].url : ""; };
+const gSrc = (k) => (GLAW[k] || []).filter((i) => R[i]).map((i) => R[i].url ? `<a href="${esc(R[i].url)}" target="_blank" rel="noopener">${esc(R[i].t)}</a>` : esc(R[i].t)).join(" · ");
 const GKEYS = Object.keys(GLOSS).sort((a, b) => b.length - a.length);
 const GRE = GKEYS.length ? new RegExp("\\b(" + GKEYS.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")(?![\\w-])", "i") : null;
 const GSKIP = new Set(["A", "BUTTON", "INPUT", "TEXTAREA", "SELECT", "OPTION", "LABEL", "SCRIPT", "STYLE", "SVG", "H1", "H2", "CODE", "ABBR", "SUMMARY", "TITLE", "LEGEND", "TH"]);
@@ -1221,15 +1224,15 @@ function glossify() {
       const key = lk(m[1]); if (!key || used.has(key)) continue;
       used.add(key); frag = frag || document.createDocumentFragment();
       frag.appendChild(document.createTextNode(txt.slice(last, m.index)));
-      const ab = document.createElement("abbr"); ab.className = "gl"; ab.tabIndex = 0; ab.textContent = m[1]; ab.dataset.d = GLOSS[key]; ab.setAttribute("aria-label", m[1] + ": " + GLOSS[key]);
+      const url = gUrl(key), ab = document.createElement(url ? "a" : "abbr"); ab.className = "gl"; if (url) { ab.href = url; ab.target = "_blank"; ab.rel = "noopener"; } else ab.tabIndex = 0; ab.textContent = m[1]; ab.dataset.d = GLOSS[key]; ab.setAttribute("aria-label", m[1] + ": " + GLOSS[key]);
       frag.appendChild(ab); last = m.index + m[1].length;
     }
     if (frag) { frag.appendChild(document.createTextNode(txt.slice(last))); node.parentNode.replaceChild(frag, node); }
   });
 }
 function glossaryView() {
-  return `<div class="narrow glpage"><h1>Glossary</h1><p class="sub">Plain-English definitions. Across the site, a dotted underline means you can hover or tap a term to see its definition.</p>
-  <dl class="gll">${Object.keys(GLOSS).sort((a, b) => a.localeCompare(b)).map((k) => `<dt>${esc(k)}</dt><dd>${esc(GLOSS[k])}</dd>`).join("")}</dl></div>`;
+  return `<div class="narrow glpage">${libTabs("glossary")}<h1>Glossary</h1><p class="sub">Plain-English definitions, each with the law or form it comes from. Across the site, a dotted underline means you can hover over a term to see its definition, and click it to open the source.</p>
+  <dl class="gll">${Object.keys(GLOSS).sort((a, b) => a.localeCompare(b)).map((k) => `<dt id="g-${esc(k.replace(/[^a-z0-9]+/gi, "-"))}">${esc(k)}</dt><dd>${esc(GLOSS[k])}${gSrc(k) ? `<span class="gls">Source: ${gSrc(k)}</span>` : ""}</dd>`).join("")}</dl></div>`;
 }
 
 const ALIAS = { readings: "library", documents: "library", exercises: "case" };
