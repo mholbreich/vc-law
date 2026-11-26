@@ -1141,59 +1141,36 @@ const VIEWS = { home, schedule, syllabus: syllabusView, people: peopleView, gues
     paint(0);
   }
 
-/* ---------- SAFE conversion explainer ---------- */
-const SX = Object.assign({ s0: 0, rInv: 3e5, rCap: 8e6, mInv: 2e5, mCap: 10e6, mDisc: 0.2, mPost: false, pre: 14e6, inv: 3e6, step: 0 }, store.get("vcl-safex", {}));
-function safeCalc(o) {
-  const S0 = o.s0 || (ST.founders.reduce((a, f) => a + (+f.shares || 0), 0) + (+ST.pool || 0));
-  const rF = o.rCap > 0 ? o.rInv / o.rCap : 0, mF = o.mPost && o.mCap > 0 ? o.mInv / o.mCap : 0;
-  let P = o.pre / S0, C = S0, M = 0, Rs = 0, mCapP = 0, mDiscP = 0, mP = 0;
-  for (let i = 0; i < 200; i++) {
-    if (o.mPost) { C = S0 / Math.max(0.05, 1 - rF - mF); M = mF * C; mCapP = o.mCap / C; mDiscP = P * (1 - o.mDisc); mP = o.mInv / M; }
-    else { mCapP = o.mCap > 0 ? o.mCap / S0 : Infinity; mDiscP = o.mDisc > 0 ? P * (1 - o.mDisc) : Infinity; mP = Math.min(mCapP, mDiscP, P); M = o.mInv / mP; C = (S0 + M) / Math.max(0.05, 1 - rF); }
-    Rs = rF * C;
-    const nP = o.pre / (S0 + M + Rs);
-    if (Math.abs(nP - P) < 1e-12) { P = nP; break; } P = nP;
-  }
-  const N = o.inv / P, T = S0 + M + Rs + N;
-  return { S0, P, C, M, Rs, N, T, rP: o.rInv / Rs, mP, mCapP, mDiscP, rF, f: S0 / T };
-}
+/* ---------- SAFE conversion explainer: two pies ---------- */
+const SX = Object.assign({ rInv: 3e5, rCap: 8e6, mInv: 2e5, mDisc: 0.2, pre: 14e6, inv: 3e6 }, store.get("vcl-safex2", {}));
 function safex() {
-  const pxs = (v) => "$" + v.toFixed(v < 1 ? 4 : 3);
-  const sh = (v) => Math.round(v).toLocaleString();
   setTimeout(() => {
     const root = document.getElementById("sx"); if (!root) return;
-    const redraw = () => { store.set("vcl-safex", SX); paint(); };
-    root.addEventListener("input", (e) => { const k = e.target.dataset.x; if (!k) return; const u = e.target.dataset.u; let v = parseFloat(e.target.value); if (isNaN(v)) return; SX[k] = u === "M" ? v * 1e6 : u === "%" ? v / 100 : v; redraw(); });
-    root.addEventListener("change", (e) => { if (e.target.id === "sxform") { SX.mPost = e.target.value === "post"; redraw(); } });
-    root.addEventListener("click", (e) => { const b = e.target.closest("[data-st]"); if (b) { SX.step = +b.dataset.st; redraw(); } });
+    root.addEventListener("input", (e) => { const k = e.target.dataset.x; if (!k) return; const u = e.target.dataset.u; let v = parseFloat(e.target.value); if (isNaN(v)) return; SX[k] = u === "M" ? v * 1e6 : u === "%" ? v / 100 : v; store.set("vcl-safex2", SX); paint(); });
     paint();
   });
-  const fld = (k, u, l) => `<label class="f">${l}${u === "M" ? " ($M)" : u === "%" ? " (%)" : ""}<input type="number" step="any" data-x="${k}" data-u="${u}" value="${u === "M" ? SX[k] / 1e6 : u === "%" ? SX[k] * 100 : SX[k]}"></label>`;
+  const fld = (k, u, l) => `<label class="f">${l}${u === "M" ? " ($M)" : u === "%" ? " (%)" : ""}<input type="number" step="any" data-x="${k}" data-u="${u}" value="${u === "M" ? SX[k] / 1e6 : u === "%" ? +(SX[k] * 100).toFixed(2) : SX[k]}"></label>`;
+  const pie = (f, col, label) => `<div class="pie" style="background:conic-gradient(${col} 0 ${Math.max(0, Math.min(1, f)) * 360}deg, var(--line) 0)" role="img" aria-label="${esc(label)}: ${pct(f, 2)}"><span>${pct(f, 2)}</span></div><div class="pielg"><span><i style="background:${col}"></i>${esc(label)} ${pct(f, 2)}</span><span><i style="background:var(--line)"></i>Everyone else</span></div>`;
   function paint() {
     const el = document.getElementById("sxout"); if (!el) return;
-    const r = safeCalc(SX), alt = safeCalc({ ...SX, mPost: !SX.mPost });
-    const steps = [
-      ["Before the Seed", `The company has <b>${sh(r.S0)}</b> shares: the founders’ stock plus the option pool. Ruth and Marcus have paid in ${money(SX.rInv + SX.mInv)}, but they don’t own any shares yet. A SAFE is a promise of shares later.`],
-      ["The Seed sets a price", `The Seed lead invests ${money(SX.inv)} at a ${money(SX.pre)} pre-money valuation. Divide that by the shares counted before the new money, including the shares the SAFEs are about to get, and the Seed price is <b>${pxs(r.P)}</b> a share.`],
-      ["Ruth’s post-money SAFE", `Ruth’s ${money(SX.rInv)} at a ${money(SX.rCap)} post-money cap buys a fixed slice: ${money(SX.rInv)} ÷ ${money(SX.rCap)} = <b>${pct(r.rF, 2)}</b> of the company as it stands just before the Seed, counting every SAFE. That’s <b>${sh(r.Rs)}</b> shares at ${pxs(r.rP)} each. Nothing Marcus signed can shrink that slice.`],
-      [SX.mPost ? "Marcus’s post-money SAFE" : "Marcus’s pre-money SAFE", SX.mPost ? `On the same form as Ruth, Marcus also buys a fixed slice: ${money(SX.mInv)} ÷ ${money(SX.mCap)} = <b>${pct(SX.mInv / SX.mCap, 2)}</b>, or <b>${sh(r.M)}</b> shares.` : `Marcus’s form works differently. His cap price is ${money(SX.mCap)} divided by the shares <i>before</i> any SAFE converts: <b>${pxs(r.mCapP)}</b>. His discount price is the Seed price less ${pct(SX.mDisc, 0)}: <b>${pxs(r.mDiscP)}</b>. He gets whichever is lower, so <b>${pxs(r.mP)}</b>, and <b>${sh(r.M)}</b> shares.`],
-      ["Who paid for it?", `After the Seed the founders and pool hold <b>${pct(r.f)}</b>. Ruth’s form guarantees her slice, so the founders absorb the dilution from her SAFE. If Marcus had signed the ${SX.mPost ? "pre-money" : "post-money"} form instead, the founders would hold <b>${pct(alt.f)}</b>. ${Math.abs(alt.f - r.f) < 0.005 ? "Here the gap is small. " : ""}The bigger difference is certainty: Ruth knew her percentage the day she signed, while Marcus’s depends on the Seed price and on how the share count is measured, and the two forms measure it differently. That’s why mixing forms, as Bernard did in the class 3 inbox, makes work for the lawyers.`]
-    ];
-    const seg = (n, v, c) => v > 0 ? `<div class="mvseg" style="width:${v / r.T * 100}%;background:${c}" title="${esc(n)}"><span>${v / r.T > 0.07 ? esc(n) + " " + pct(v / r.T, 0) : ""}</span></div>` : "";
-    const showR = SX.step >= 2, showM = SX.step >= 3, showN = SX.step >= 1;
-    el.innerHTML = `<div class="mvsteps" style="margin-bottom:14px">${steps.map((s, i) => `<button type="button" data-st="${i}" class="mvstep ${i === SX.step ? "on" : i < SX.step ? "done" : ""}">${i + 1}. ${esc(s[0])}</button>`).join("")}</div>
-    <div class="mvstage"><div class="mvname">${esc(steps[SX.step][0])}</div>
-    <div class="mvbar">${seg("Founders and pool", r.S0, "#cfb87c")}${showR ? seg("Ruth", r.Rs, "#c97b5a") : ""}${showM ? seg("Marcus", r.M, "#94526b") : ""}${showN ? seg("Seed lead", r.N, "#3f6e8c") : ""}</div>
-    <p class="mvsay in">${steps[SX.step][1]}</p>
-    <p>${SX.step > 0 ? `<button type="button" class="ghost" data-st="${SX.step - 1}">← Back</button> ` : ""}${SX.step < 4 ? `<button type="button" class="mvplay" data-st="${SX.step + 1}">Next →</button>` : ""}</p></div>`;
+    const capF = SX.rCap > 0 ? SX.rInv / SX.rCap : 0;
+    const post = SX.pre + SX.inv, worth = SX.mInv / Math.max(0.01, 1 - SX.mDisc), discF = post > 0 ? worth / post : 0, noDiscF = post > 0 ? SX.mInv / post : 0;
+    el.innerHTML = `<div class="pies">
+      <div class="piebox"><h3>At the cap</h3>${pie(capF, "#c97b5a", "Ruth")}
+        <p class="pmath">${money(SX.rInv)} ÷ ${money(SX.rCap)} cap = <b>${pct(capF, 2)}</b></p>
+        <p>Ruth’s post-money SAFE buys a fixed slice. Divide what she put in by the cap, and that’s her share of the company just before the Seed money comes in. She knows it the day she signs.</p></div>
+      <div class="piebox"><h3>With the discount</h3>${pie(discF, "#94526b", "Marcus")}
+        <p class="pmath">${money(SX.mInv)} ÷ ${pct(1 - SX.mDisc, 0)} = <b>${money(worth)}</b> of Seed stock, or <b>${pct(discF, 2)}</b> of a ${money(post)} company</p>
+        <p>Marcus’s discount means he pays ${pct(1 - SX.mDisc, 0)} of the Seed price. So his ${money(SX.mInv)} buys as many shares as ${money(worth)} would buy for the Seed investor. Without the discount he’d get ${pct(noDiscF, 2)}.</p></div>
+    </div>`;
   }
   return `<h1>Tools</h1>${tabs("safex")}
-  <p class="sub">How Ruth’s and Marcus’s SAFEs turn into shares at the Seed, one step at a time. Ruth signed the post-money form; Marcus signed a pre-money form with a discount. Change the numbers to see what moves.</p>
-  <div id="sx"><form class="ctl" onsubmit="return false" style="margin-bottom:18px"><fieldset><legend>Ruth</legend>${fld("rInv", "M", "Invested")}${fld("rCap", "M", "Post-money cap")}</fieldset>
-  <fieldset><legend>Marcus</legend>${fld("mInv", "M", "Invested")}${fld("mCap", "M", "Cap")}${fld("mDisc", "%", "Discount")}<label class="f">Form<select id="sxform"><option value="pre" ${SX.mPost ? "" : "selected"}>Pre-money SAFE</option><option value="post" ${SX.mPost ? "selected" : ""}>Post-money SAFE</option></select></label></fieldset>
+  <p class="sub">The two ways a SAFE turns into shares, as two pies. Ruth’s SAFE converts at its cap. Marcus’s converts at a discount to the Seed price. Change the numbers to see the slices move.</p>
+  <div id="sx"><form class="ctl" onsubmit="return false" style="margin-bottom:18px"><fieldset><legend>Ruth: cap</legend>${fld("rInv", "M", "Invested")}${fld("rCap", "M", "Post-money cap")}</fieldset>
+  <fieldset><legend>Marcus: discount</legend>${fld("mInv", "M", "Invested")}${fld("mDisc", "%", "Discount")}</fieldset>
   <fieldset><legend>Seed round</legend>${fld("pre", "M", "Pre-money")}${fld("inv", "M", "Invested")}</fieldset></form>
   <div id="sxout"></div></div>
-  <p class="quiet">Simplified: the pool isn’t topped up in the Seed here, so the numbers differ a little from the Dilution tab. The point is the order of the steps and who bears the dilution.</p>`;
+  <p class="quiet">Simplified to show the idea. A real SAFE with both a cap and a discount converts at whichever gives the investor more shares, and the exact share counts depend on the pool and the other SAFEs. The Dilution tab does the full math.</p>`;
 }
 
 /* ---------- Story timeline ---------- */
