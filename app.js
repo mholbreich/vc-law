@@ -728,7 +728,7 @@ function drawDinners() {
   }
   const one = (name) => { const gi = window.GUESTS.findIndex((g) => g.name === name); return gi >= 0 ? guestPic(window.GUESTS[gi], gi) : guestPic({ name }, 0); };
   const gp = (name) => `<span class="dnpics">${String(name).split(/\s+(?:and|&)\s+/).map(one).join("")}</span>`;
-  const info = (name) => (window.DINNER_INFO || {})[name] || {};
+  const info = (name) => { const i = (window.DINNER_INFO || {})[name]; if (i) return i; const g = window.GUESTS.find((x) => x.name === name); return g ? { org: g.org, blurb: (String(g.bio || "").match(/^.*?\.(\s|$)/) || [""])[0].trim() } : {}; };
   const org = (name) => info(name).org || (window.GUESTS.find((g) => g.name === name) || {}).org || "";
   let h = "";
   if (preview) h += `<div class="dnnote">${DS.err ? `Sign-ups happen on the <a href="${esc(C.publicUrl || "#")}">public course site</a>. This is a preview.` : "Sign-ups open soon. You can try it out now; nothing is sent until they open."}</div>`;
