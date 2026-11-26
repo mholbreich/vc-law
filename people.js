@@ -115,7 +115,7 @@ window.PEOPLE = [
       { name: "Marcus Lee", role: "Angel 2",
         line: "A former founder who sold his company and now angel invests aggressively.",
         like: "Pushy, charming and always in a hurry. Calls founders directly and goes around their lawyers. Treats a $200K check as if it were a lead investment.",
-        wants: "Far more than his check is worth: an observer seat, an MFN, pro rata, and an advisor agreement that pays him 2% of the company in stock plus a $10,000 monthly retainer for “strategic help.”",
+        wants: "Far more than his check is worth: an observer seat, an MFN, pro rata, and an advisor agreement that pays him 2% of the company in stock plus a $10,000 monthly retainer for “strategic help,” and full ratchet anti-dilution protection.",
         irks: "Lawyers. Process. Being told no, or being told what’s market.",
         says: "“Quick one.” “Everyone does this.” “Off the record…” “I add a lot more than money.”",
         writes: "Urgent subject lines and long lists of asks. Sends his own forms. Never quite off the record.",
