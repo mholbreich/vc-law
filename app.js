@@ -712,7 +712,7 @@ async function loadDinners() {
     } catch (e) { DS.err = "offline"; }
   }
   if (!DS.list) {
-    DS.list = window.GUESTS.filter((g) => !g.placeholder && !g.maybe).map((g) => ({ guest: g.name, date: "", seats: 6 }));
+    DS.list = Object.keys(window.DINNER_INFO || {}).filter((k) => !(window.GUESTS.find((g) => g.name === k) || {}).maybe).map((k) => ({ guest: k, date: "", seats: 6 }));
     if (!api || DS.err) DS.status = "preview";
   }
   DS.picks = DS.picks.filter((p) => DS.list.some((d) => d.guest === p));
@@ -726,8 +726,10 @@ function drawDinners() {
     el.innerHTML = `<div class="dnnote"><b>Sign-ups are closed.</b> Everyone gets an email with their dinner. If you didn’t sign up in time, email the instructor.</div>`;
     return;
   }
-  const gp = (name) => { const gi = window.GUESTS.findIndex((g) => g.name === name); return gi >= 0 ? guestPic(window.GUESTS[gi], gi) : guestPic({ name }, 0); };
-  const org = (name) => (window.GUESTS.find((g) => g.name === name) || {}).org || "";
+  const one = (name) => { const gi = window.GUESTS.findIndex((g) => g.name === name); return gi >= 0 ? guestPic(window.GUESTS[gi], gi) : guestPic({ name }, 0); };
+  const gp = (name) => `<span class="dnpics">${String(name).split(/\s+(?:and|&)\s+/).map(one).join("")}</span>`;
+  const info = (name) => (window.DINNER_INFO || {})[name] || {};
+  const org = (name) => info(name).org || (window.GUESTS.find((g) => g.name === name) || {}).org || "";
   let h = "";
   if (preview) h += `<div class="dnnote">${DS.err ? `Sign-ups happen on the <a href="${esc(C.publicUrl || "#")}">public course site</a>. This is a preview.` : "Sign-ups open soon. You can try it out now; nothing is sent until they open."}</div>`;
   if (DS.done && open) h += `<div class="dnnote ok"><b>You’re in the draw.</b> We emailed you a copy of your picks. You can change them below until sign-ups close.</div>`;
@@ -735,7 +737,7 @@ function drawDinners() {
     const k = DS.picks.indexOf(d.guest), hot = DS.counts[d.guest] || 0;
     return `<button type="button" class="dncard ${k >= 0 ? "on" : ""}" data-g="${esc(d.guest)}" aria-pressed="${k >= 0}">
       ${k >= 0 ? `<span class="dnrank">${k + 1}</span>` : ""}${gp(d.guest)}
-      <span class="dnt">Dinner with ${esc(d.guest)}</span><span class="dnm">${esc([org(d.guest), d.date, d.seats + " seats"].filter(Boolean).join(" · "))}</span>
+      <span class="dnt">Dinner with ${esc(d.guest)}</span><span class="dnorg">${esc(org(d.guest))}</span>${info(d.guest).blurb ? `<span class="dnb">${esc(info(d.guest).blurb)}</span>` : ""}<span class="dnm">${esc([d.date, d.seats + " seats"].filter(Boolean).join(" · "))}</span>
       ${hot ? `<span class="dnm">${hot} picked this first</span>` : ""}</button>`; }).join("")}</div>`;
   const n = DS.picks.length;
   h += `<div class="dnbar ${n ? "show" : ""}"><div class="dnpicks">${n ? `<b>Your picks:</b> ${DS.picks.map((p, i) => `${i + 1}. ${esc(p)}`).join(" · ")}` : ""}${n >= DMAX ? ` <span class="quiet">(that’s the most)</span>` : ""}</div>
