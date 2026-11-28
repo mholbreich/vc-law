@@ -60,7 +60,7 @@ window.WEEKS = [
     guest: "Experienced venture investor",
     proposedGuests: "Ron Zori, Taylor Sargent and/or Mason Angel",
     prep: "Peter Thiel, Zero to One (selections); introductory VC return/portfolio reading.",
-    readings: ["zero-to-one", "kupor", "venture-monitor"],
+    readings: ["collison-luckey", "zero-to-one", "kupor", "venture-monitor"],
     scenarios: [{ label: "What a $100M fund needs to return", tool: "fund" }],
     tools: [], caseCh: "intro" },
   { n: 2, date: "Jan 21", stage: "found", title: "Incorporation, Founder Equity, and IP",
@@ -159,6 +159,7 @@ window.WEEKS = [
 /* status: "draft" = named in the Spring 2027 draft; "2023" = assigned in the
    Spring 2023 syllabus; "suggested" = added in the app, not yet assigned */
 window.READINGS = {
+  "collison-luckey": { t: "Patrick Collison, post on X, and Palmer Luckey’s response (2026)", kind: "Essay", topic: "Venture", status: "assigned", note: "Read the post and Luckey’s reply in the thread", url: "https://x.com/patrickc/status/2125430547237216488" },
   "dgcl-122": { t: "8 Del. C. § 122(18) (stockholder agreements, added 2024)", kind: "Delaware law", topic: "Governance", status: "reference", note: "Lets a corporation agree to give stockholders approval rights, the response to Moelis", url: "https://delcode.delaware.gov/title8/c001/sc02/index.html" },
   "dgcl-141": { t: "8 Del. C. § 141 (board of directors)", kind: "Delaware law", topic: "Governance", status: "reference", note: "The board manages the corporation; removal of directors", url: "https://delcode.delaware.gov/title8/c001/sc04/index.html" },
   "dgcl-144": { t: "8 Del. C. § 144 (interested director and controller transactions, as amended 2025)", kind: "Delaware law", topic: "Governance", status: "reference", note: "Safe harbors for conflicted transactions", url: "https://delcode.delaware.gov/title8/c001/sc04/index.html" },
